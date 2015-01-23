@@ -1,0 +1,15 @@
+#! /bin/sh
+
+mkdir -p "thumbnails"
+for pdf in *.pdf; do
+  echo "Examining $pdf..."
+  size=`identify -format "%[fx:w/72]x%[fx:h/72]" $pdf`
+  width=`echo $size | cut -f1 -dx`
+  height=`echo $size | cut -f2 -dx`
+  echo "$pdf is $width by $height inches..."
+  factor=`echo "scale=5; sqrt((495*350)/($width*$height))" | bc`
+  echo "Sampling at a density of $factor pixels per inch..."
+  convert -background white -alpha Remove -density $factor $pdf "thumbnails/${pdf%.pdf}.jpg"
+done
+
+echo "Finished!"

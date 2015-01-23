@@ -13,3 +13,17 @@ A collection of command-line scripts that make my life easier:
     in the PDF metadata. This Python script lets you edit the author metadata on
     the command line. (NB. assumes you have the `rm` command for deleting a
     temporary file.)
+
+  * **pdfposter2thm:** Convert a folder of PDFs into JPEGs
+
+    This Bash script was designed for creating thumbnail images of PDF posters.
+    It runs through all the PDFs in the current working directory and converts
+    them to JPEG bitmaps using ImageMagick, saving the result in a `thumbnails`
+    subdirectory. Any page with a 1-to-sqrt(2) aspect ratio (like, say, A4) will
+    be scaled to a 495×350 px image, and all other images will have a similar
+    area.
+
+    I had hoped to do this transparently in pixels per centimetre, given that
+    the ISO page sizes are rounded to the nearest millimetre, but alas on my
+    system at least the ImageMagick option `-units PixelsPerCentimeter` seems
+    utterly ineffective. Hence it reports its progress in inches (sigh).
