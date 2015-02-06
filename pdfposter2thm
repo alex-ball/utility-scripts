@@ -9,7 +9,7 @@ for pdf in *.pdf; do
   echo "$pdf is $width by $height inches..."
   factor=`echo "scale=5; sqrt((495*350)/($width*$height))" | bc`
   echo "Sampling at a density of $factor pixels per inch..."
-  convert -background white -alpha Remove -density $factor $pdf "thumbnails/${pdf%.pdf}.jpg"
+  convert -background white -alpha Remove -density 300 -resample $factor $pdf "thumbnails/${pdf%.pdf}.jpg"
 done
 
 echo "Finished!"
