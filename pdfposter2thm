@@ -7,9 +7,10 @@ for pdf in *.pdf; do
   width=`echo $size | cut -f1 -dx`
   height=`echo $size | cut -f2 -dx`
   echo "$pdf is $width by $height inches..."
-  factor=`echo "scale=5; sqrt((495*350)/($width*$height))" | bc`
-  echo "Sampling at a density of $factor pixels per inch..."
-  convert -background white -alpha Remove -density 300 -resample $factor $pdf "thumbnails/${pdf%.pdf}.jpg"
+  hifactor=`echo "scale=5; sqrt((sqrt(2)*5600^2)/($width*$height))" | bc`
+  lofactor=`echo "scale=5; sqrt((sqrt(2)*350^2)/($width*$height))" | bc`
+  echo "Sampling at a density of $hifactor PPI (aliased), $lofactor PPI (anti-aliased)..."
+  convert -background white -alpha Remove -density $hifactor -resample $lofactor $pdf "thumbnails/${pdf%.pdf}.jpg"
 done
 
 echo "Finished!"
