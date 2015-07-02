@@ -1,5 +1,5 @@
 #! /usr/bin/python
-import sys, os, argparse
+import sys, os, argparse, zipfile, warnings
 from lxml import etree as ET
 
 parser = argparse.ArgumentParser(description="Add or modify author metadata of ODT file")
@@ -13,31 +13,29 @@ args = parser.parse_args()
 authors = args.authors.decode(sys.getfilesystemencoding())
 
 # Extract metadata
-os.system("unzip {0} meta.xml".format(args.document))
+with zipfile.ZipFile(args.document, 'a') as odtfile:
+    metadata = odtfile.read('meta.xml')
 
-# Change or add author metadata
-tree = ET.parse('meta.xml')
-root = tree.getroot()
-metaElement = root.find('office:meta', root.nsmap)
-if metaElement == None:
-    print "Cannot find office:meta element. Something is wrong."
-    exit(1)
-authorElement = metaElement.find('meta:initial-creator', root.nsmap)
-if authorElement == None:
-    print "Cannot find meta:initial-creator element. Creating one."
-    authorElement = ET.Element('{urn:oasis:names:tc:opendocument:xmlns:meta:1.0}initial-creator')
-    authorElement.text = authors
-    metaElement.append(authorElement)
-else:
-    print "Found meta:initial-creator element. Updating."
-    authorElement.text = authors
+    # Change or add author metadata
+    root = ET.fromstring(metadata)
+    metaElement = root.find('office:meta', root.nsmap)
+    if metaElement == None:
+        print "Cannot find office:meta element. Something is wrong."
+        exit(1)
+    authorElement = metaElement.find('meta:initial-creator', root.nsmap)
+    if authorElement == None:
+        print "Cannot find meta:initial-creator element. Creating one."
+        authorElement = ET.Element('{urn:oasis:names:tc:opendocument:xmlns:meta:1.0}initial-creator')
+        authorElement.text = authors
+        metaElement.append(authorElement)
+    else:
+        print "Found meta:initial-creator element. Updating."
+        authorElement.text = authors
 
-tree.write('meta.xml')
-
-# Reinsert metadata
-os.system("zip -u {0} meta.xml".format(args.document))
-
-# Tidy up
-os.system('rm meta.xml')
+    # Update file, suppressing the warning about overwriting
+    newMetadata = ET.tostring(root)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        odtfile.writestr('meta.xml', newMetadata)
 
 print "Success!"

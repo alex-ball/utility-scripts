@@ -11,8 +11,7 @@ A collection of command-line scripts that make my life easier:
     written.) I come across this a lot as I often have to turn other people's
     documents into PDF, and author information is rather prominently displayed
     in the PDF metadata. This Python script lets you edit the author metadata on
-    the command line. (NB. assumes you have the `rm` command for deleting a
-    temporary file.)
+    the command line.
 
   * **pdfposter2thm:** Convert a folder of PDFs into JPEGs
 
