@@ -26,3 +26,27 @@ A collection of command-line scripts that make my life easier:
     the ISO page sizes are rounded to the nearest millimetre, but alas on my
     system at least the ImageMagick option `-units PixelsPerCentimeter` seems
     utterly ineffective. Hence it reports its progress in inches (sigh).
+
+  * **get-audio:** Download audio content to chronological queues
+
+    I wrote this Python 3 script to fill a particular need I have. Unlike
+    everyone else, it seems, I find it most convenient to download all the
+    podcasts to which I listen to a single queue and listen to them in strict
+    chronological order. This script downloads them, renames them with the date
+    and time of release at the start (so they sort correctly) and evens out the
+    levels. As well as downloading podcasts, it can also download BBC radio
+    programmes and add them to the queue. For programmes that are best listened
+    to in a block rather than strict chronological order, the script supports
+    an 'audiobook' queue; unfortunately it is not yet clever enough to date the
+    the individual audiobook folders so you have to do that manually when you
+    think the folder is full enough.
+    
+    The script has become quite complicated, so as well as the standard Python
+    libraries it also relies on
+    
+      * the non-standard libraries [`requests`](http://docs.python-requests.org/)
+        and [`dateutil`](https://dateutil.readthedocs.org/);
+      * [`mp3gain`](http://mp3gain.sourceforge.net/),
+        [`aacgain`](http://aacgain.altosdesign.com/) and
+        [`vorbisgain`](https://sjeng.org/vorbisgain.html);
+      * [`get_iplayer`](http://www.infradead.org/get_iplayer/html/get_iplayer.html).
