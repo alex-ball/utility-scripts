@@ -16,9 +16,9 @@ import urllib3.util, requests
 getiplayer = [ 'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--attempts', '3', '--nopurge', '--nocopyright', '--type', 'radio', '-g' ]
 getiplayerP = getiplayer + ['--file-prefix', '<firstbcast>@<nameshort>']
 getiplayerA = getiplayer + ['-s', '--subdir-format', '<name>', '--file-prefix', '<lastbcast>@<senum>-<episodeshort>']
-aacgain = [ 'aacgain', '-k', '-p', '-r', '-e' ]
-mp3gain = [ 'mp3gain', '-k', '-p', '-r', '-q' ]
-vorbisgain = [ 'vorbisgain' ]
+aacgain = [ 'aacgain', '-p', '-q', '-k', '-r', '-e' ]
+mp3gain = [ 'aacgain', '-p', '-q', '-k', '-r', '-e' ]
+vorbisgain = [ 'vorbisgain', '-p', '-q', '-f' ]
 
 
 ### SETTING UP
