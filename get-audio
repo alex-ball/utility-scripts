@@ -354,8 +354,14 @@ def download(source, target):
                     sys.stdout.write("\r[{}{}] {}/{}".format('=' * done, ' ' * (50-done), dl, total_length))
                     sys.stdout.flush()
                 print('') # start newline
+    except URLError as e:
+        print('Something went wrong with the Internet!')
+        print(e)
+        print('Skipping...')
+        return False
     except IOError:
         print('Cannot save file: input/output error.')
+        print('Skipping...')
         return False
     if os.path.splitext(target)[1] == ".mp3":
         subprocess.call(mp3gain + [ target ])
