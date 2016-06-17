@@ -10,7 +10,7 @@ from dateutil import parser as dateparser
 from dateutil.tz import *
 import urllib3.util, requests
 from clint.textui import progress # Not on Trusty
-# from blist import sorteddict # Not on Trusty
+from blist import sorteddict # Not on Trusty
 
 # Also requires external utilities: get_iplayer, aacgain, mp3gain, vorbisgain
 getiplayer = [ 'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--attempts', '3', '--nopurge', '--nocopyright', '--type', 'radio', '-g' ]
@@ -166,7 +166,7 @@ pids = 'PIDs'
 
 isNewConfig = False
 
-config = configparser.ConfigParser(allow_no_value=True, delimiters=('=',), inline_comment_prefixes=(';',))
+config = configparser.ConfigParser(dict_type=sorteddict, allow_no_value=True, delimiters=('=',), inline_comment_prefixes=(';',))
 config.optionxform = lambda option: option
 if os.path.isfile(config_file):
     config.read(config_file)
