@@ -5,11 +5,11 @@
 # Standard library
 import re, datetime, tempfile, shutil, configparser, os, argparse, subprocess, sys
 from xml.dom import minidom, Node
-# Non-standard libraries: python3-dateutil, python3-requests
+# Non-standard libraries: python3-dateutil, python3-requests, python3-clint, python3-blist
 from dateutil import parser as dateparser
 from dateutil.tz import *
 import urllib3.util, requests
-# from clint.textui import progress # Not on Trusty
+from clint.textui import progress # Not on Trusty
 # from blist import sorteddict # Not on Trusty
 
 # Also requires external utilities: get_iplayer, aacgain, mp3gain, vorbisgain
@@ -338,21 +338,16 @@ def download(source, target):
             r = requests.get(source, headers=headers, allow_redirects=True, stream=True)
             print('...and saving to {}.'.format(target))
             # Could just f.write(r.content), but here we implement a simple progress bar.
-            # When clint module is available, may use that instead.
-            # http://stackoverflow.com/questions/15644964/python-progress-bar-and-downloads
             raw_length = r.headers.get('content-length')
             if raw_length is None:
                 # No declared length
                 f.write(r.content)
             else:
                 total_length = int(raw_length)
-                dl = 0
-                for data in r.iter_content(chunk_size=1024):
-                    dl += len(data)
-                    f.write(data)
-                    done = int(50 * dl / total_length)
-                    sys.stdout.write("\r[{}{}] {}/{}".format('=' * done, ' ' * (50-done), dl, total_length))
-                    sys.stdout.flush()
+                for chunk in progress.bar(r.iter_content(chunk_size=1024), expected_size=(total_length/1024) + 1): 
+                    if chunk:
+                        f.write(chunk)
+                        f.flush()
                 print('') # start newline
     except URLError as e:
         print('Something went wrong with the Internet!')
