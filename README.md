@@ -44,8 +44,10 @@ A collection of command-line scripts that make my life easier:
     The script has become quite complicated, so as well as the standard Python
     libraries it also relies on
     
-      * the non-standard libraries [`requests`](http://docs.python-requests.org/)
-        and [`dateutil`](https://dateutil.readthedocs.org/);
+      * the non-standard libraries [`requests`](http://docs.python-requests.org/),
+        [`dateutil`](https://dateutil.readthedocs.org/),
+        [`clint`](https://pypi.python.org/pypi/clint/) and
+        [`blist`](https://pypi.python.org/pypi/blist/);
       * [`mp3gain`](http://mp3gain.sourceforge.net/),
         [`aacgain`](http://aacgain.altosdesign.com/) and
         [`vorbisgain`](https://sjeng.org/vorbisgain.html);
