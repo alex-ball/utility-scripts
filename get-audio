@@ -323,7 +323,7 @@ if args.mv_lims:
     print('You can give a comma-separated list to stage a folder in chunks, or leave blank to keep the current setting.')
     csnum = re.compile(r'[,\s\d]+')
     for entry in config.options(limits):
-        lim = input('Staging limit(s) for {}? (Current value: {}) '.format(entry, config.get(limits, entry))
+        lim = input('Staging limit(s) for {}? (Current value: {}) '.format(entry, config.get(limits, entry)))
         if csnum.fullmatch(lim) is None:
             print('Leaving unchanged.')
         else:
