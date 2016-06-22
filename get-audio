@@ -294,57 +294,6 @@ if args.rm_pid:
     else:
         print('Cannot find {} in config file.'.format(o[0]))
 
-# Detect unstaged audiobook files
-unstaged = []
-dated = re.compile(r'\d{8}-')
-if os.path.isdir(audiobookDir):
-    for entry in os.listdir(audiobookDir):
-        if os.path.isdir(os.path.join(audiobookDir, entry)):
-            if dated.match(entry) is None:
-                unstaged.append(entry)
-
-if not limits in config:
-    config.add_section(limits)
-    isNewConfig = True
-if args.mk_lims:
-    print('Please give the number of episodes each folder should contain before being staged.')
-    print('You can give a comma-separated list to stage a folder in chunks.')
-    csnum = re.compile(r'[,\s\d]+')
-    for entry in unstaged:
-        if not entry in config.options(limits):
-            lim = input('Staging limit(s) for {}? '.format(entry))
-            while csnum.fullmatch(lim) is None:
-                print("That's not right. Enter something like 6 or 4,4,3.")
-                lim = input('Staging limit(s) for {}? '.format(entry))
-            config.set(limits, entry, lim)
-    isNewConfig = True
-if args.mv_lims:
-    print('Please give the number of episodes each folder should contain before being staged.')
-    print('You can give a comma-separated list to stage a folder in chunks, or leave blank to keep the current setting.')
-    csnum = re.compile(r'[,\s\d]+')
-    for entry in config.options(limits):
-        lim = input('Staging limit(s) for {}? (Current value: {}) '.format(entry, config.get(limits, entry)))
-        if csnum.fullmatch(lim) is None:
-            print('Leaving unchanged.')
-        else:
-            config.set(limits, entry, lim)
-            print('Limit(s) updated.')
-    isNewConfig = True
-if args.rm_lims:
-    for entry in config.options(limits):
-        if not entry in unstaged:
-            config.remove_option(limits, entry)
-    isNewConfig = True
-
-# Write config file if changed
-if isNewConfig:
-    try:
-        with open(config_file, 'w') as f:
-            config.write(f)
-    except IOError:
-        print('Cannot write config file; please move script to a writeable directory.')
-        sys.exit(1)
-
 # date/time prefix for podcasts: 12 characters 
 poddate = '%y%m%d-%H%M_'
 
@@ -723,29 +672,82 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID:
                 except ValueError:
                     continue
 
+### STAGING AUDIOBOOKS
+
+# Detect unstaged audiobook files
+unstaged = []
+dated = re.compile(r'\d{8}-')
+if os.path.isdir(audiobookDir):
+    for entry in os.listdir(audiobookDir):
+        if os.path.isdir(os.path.join(audiobookDir, entry)):
+            if dated.match(entry) is None:
+                unstaged.append(entry)
+
+# Process options
+if not limits in config:
+    config.add_section(limits)
+    isNewConfig = True
+if args.mk_lims:
+    print('Please give the number of episodes each folder should contain before being staged.')
+    print('You can give a comma-separated list to stage a folder in chunks.')
+    csnum = re.compile(r'[,\s\d]+')
+    for entry in unstaged:
+        if not entry in config.options(limits):
+            lim = input('Staging limit(s) for {}? '.format(entry))
+            while csnum.fullmatch(lim) is None:
+                print("That's not right. Enter something like 6 or 4,4,3.")
+                lim = input('Staging limit(s) for {}? '.format(entry))
+            config.set(limits, entry, lim)
+    args.rm_lims = True
+    isNewConfig = True
+if args.mv_lims:
+    print('Please give the number of episodes each folder should contain before being staged.')
+    print('You can give a comma-separated list to stage a folder in chunks, or leave blank to keep the current setting.')
+    csnum = re.compile(r'[,\s\d]+')
+    for entry in config.options(limits):
+        lim = input('Staging limit(s) for {}? (Current value: {}) '.format(entry, config.get(limits, entry)))
+        if csnum.fullmatch(lim) is None:
+            print('Leaving unchanged.')
+        else:
+            config.set(limits, entry, lim)
+            print('Limit(s) updated.')
+    args.rm_lims = True
+    isNewConfig = True
+
 # Stage any folders that have reached their limit
-isNewConfig = False
-for entry in unstaged:
-    if entry in config.options(limits):
-        lims = config.get(limits, entry).split(',')
-        # Extract date/time last modified of earliest file
-        earliestDate = now
-        numOfEps = 0
-        for ep in os.listdir(os.path.join(audiobookDir, entry)):
-            if os.path.isfile(os.path.join(audiobookDir, entry, ep)) and ep.endswith('.m4a'):
-                timestamp = os.path.getmtime(os.path.join(audiobookDir, entry, ep))
-                foundDate = datetime.datetime.fromtimestamp(timestamp, tz=tzutc())
-                if earliestDate > foundDate:
-                    earliestDate = foundDate
-                numOfEps += 1
-        if numOfEps == int(lims[0]):
-            newEntry = earliestDate.strftime('%Y%m%d-') + entry
-            os.rename(os.path.join(audiobookDir, entry), os.path.join(audiobookDir, newEntry))
-            if len(lims) > 1:
-                lims.pop[0]
-                limstring = ','.join(lims)
-                config.set(limits, entry, limstring)
-                isNewConfig = True
+if args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims or args.mv_lims or args.rm_lims:
+    for entry in unstaged:
+        if entry in config.options(limits):
+            lims = config.get(limits, entry).split(',')
+            # Extract date/time last modified of earliest file
+            earliestDate = now
+            numOfEps = 0
+            for ep in os.listdir(os.path.join(audiobookDir, entry)):
+                if os.path.isfile(os.path.join(audiobookDir, entry, ep)) and ep.endswith('.m4a'):
+                    timestamp = os.path.getmtime(os.path.join(audiobookDir, entry, ep))
+                    foundDate = datetime.datetime.fromtimestamp(timestamp, tz=tzutc())
+                    if earliestDate > foundDate:
+                        earliestDate = foundDate
+                    numOfEps += 1
+            if numOfEps >= int(lims[0]):
+                newEntry = earliestDate.strftime('%Y%m%d-') + entry
+                os.rename(os.path.join(audiobookDir, entry), os.path.join(audiobookDir, newEntry))
+                unstaged.remove(entry)
+                if len(lims) > 1:
+                    lims.pop[0]
+                    limstring = ','.join(lims)
+                    config.set(limits, entry, limstring)
+                    isNewConfig = True
+
+# Remove any completed limits
+if args.rm_lims:
+    for entry in config.options(limits):
+        if not entry in unstaged:
+            config.remove_option(limits, entry)
+    isNewConfig = True
+
+
+### FINISHING UP
 
 # Write config file if changed
 if isNewConfig:
