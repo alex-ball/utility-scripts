@@ -527,7 +527,7 @@ def getPodcasts(idstring, url):
 
 def fixGetIPlayerDate(s):
     "Converts date format used in get_iplayer filenames to a format understood by Python."
-    
+
     # Convert hh_MM_sshh_MM to hh:MM:ss±hhMM
     s = s.replace('_',':')
     s = re.sub(r'(:\d\d)Z', r'\1+0000', s)
@@ -539,7 +539,7 @@ def fixGetIPlayerDate(s):
 def enqueueShows(tdir):
     "Processes downloaded shows and moves them to podcast queue."
     global podcastDir
-    
+
     for entry in os.listdir(tdir):
         if entry.endswith('.m4a'):
             # Normalise volume
@@ -553,7 +553,7 @@ def enqueueShows(tdir):
             print('Moving {} to {}'.format(entry, newPath))
             shutil.move(os.path.join(tdir, entry), newPath)
             os.utime(newPath, times=(bcastDate.timestamp(), bcastDate.timestamp()))
-    
+
 ### DOWNLOADING
 
 # Adding files to podcast queue
@@ -659,7 +659,7 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID:
         if args.iplayer_ID:
             subprocess.call(getiplayerA + ['-o', audiobookDir, '--pid-recursive', '--pid', args.iplayer_ID])
             print('')
-    
+
     # Remove timestamps from filenames and apply directly to files
     for root, dirs, files in os.walk(audiobookDir):
         for entry in files:
@@ -674,14 +674,13 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID:
 
 ### STAGING AUDIOBOOKS
 
-# Detect unstaged audiobook files
+# Detect unstaged audiobook directories
 unstaged = []
 dated = re.compile(r'\d{8}-')
 if os.path.isdir(audiobookDir):
     for entry in os.listdir(audiobookDir):
-        if os.path.isdir(os.path.join(audiobookDir, entry)):
-            if dated.match(entry) is None:
-                unstaged.append(entry)
+        if os.path.isdir(os.path.join(audiobookDir, entry)) and dated.match(entry) is None:
+            unstaged.append(entry)
 
 # Process options
 if not limits in config:
@@ -698,7 +697,6 @@ if args.mk_lims:
                 print("That's not right. Enter something like 6 or 4,4,3.")
                 lim = input('Staging limit(s) for {}? '.format(entry))
             config.set(limits, entry, lim)
-    args.rm_lims = True
     isNewConfig = True
 if args.mv_lims:
     print('Please give the number of episodes each folder should contain before being staged.')
@@ -711,7 +709,6 @@ if args.mv_lims:
         else:
             config.set(limits, entry, lim)
             print('Limit(s) updated.')
-    args.rm_lims = True
     isNewConfig = True
 
 # Stage any folders that have reached their limit
@@ -732,12 +729,14 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims o
             if numOfEps >= int(lims[0]):
                 newEntry = earliestDate.strftime('%Y%m%d-') + entry
                 os.rename(os.path.join(audiobookDir, entry), os.path.join(audiobookDir, newEntry))
-                unstaged.remove(entry)
                 if len(lims) > 1:
+                    os.mkdirs(os.path.join(audiobookDir, entry))
                     lims.pop[0]
                     limstring = ','.join(lims)
                     config.set(limits, entry, limstring)
-                    isNewConfig = True
+                else:
+                    config.remove_option(limits, entry)
+                isNewConfig = True
 
 # Remove any completed limits
 if args.rm_lims:
@@ -745,7 +744,6 @@ if args.rm_lims:
         if not entry in unstaged:
             config.remove_option(limits, entry)
     isNewConfig = True
-
 
 ### FINISHING UP
 
