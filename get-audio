@@ -697,7 +697,7 @@ if args.mk_lims:
                 print("That's not right. Enter something like 6 or 4,4,3.")
                 lim = input('Staging limit(s) for {}? '.format(entry))
             config.set(limits, entry, lim)
-    isNewConfig = True
+            isNewConfig = True
 if args.mv_lims:
     print('Please give the number of episodes each folder should contain before being staged.')
     print('You can give a comma-separated list to stage a folder in chunks, or leave blank to keep the current setting.')
@@ -709,7 +709,7 @@ if args.mv_lims:
         else:
             config.set(limits, entry, lim)
             print('Limit(s) updated.')
-    isNewConfig = True
+            isNewConfig = True
 
 # Stage any folders that have reached their limit
 if args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims or args.mv_lims or args.rm_lims:
@@ -738,12 +738,13 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims o
                     config.remove_option(limits, entry)
                 isNewConfig = True
 
-# Remove any completed limits
+# Remove any (stray) completed limits
 if args.rm_lims:
     for entry in config.options(limits):
         if not entry in unstaged:
             config.remove_option(limits, entry)
-    isNewConfig = True
+            print('Limit for {} removed.'.format(entry))
+            isNewConfig = True
 
 ### FINISHING UP
 
