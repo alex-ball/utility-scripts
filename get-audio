@@ -687,20 +687,23 @@ if not limits in config:
     config.add_section(limits)
     isNewConfig = True
 if args.mk_lims:
-    if len(unstaged) > 0:
-        print('Please give the number of episodes each folder should contain before being staged.')
-        print('You can give a comma-separated list to stage a folder in chunks.')
-        csnum = re.compile(r'[,\s\d]+')
-        for entry in unstaged:
-            if not entry in config.options(limits):
+    unlimited = 0
+    csnum = re.compile(r'[,\s\d]+')
+    for entry in unstaged:
+        if not entry in config.options(limits):
+            unlimited += 1
+            if unlimited == 1:
+                print('Please give the number of episodes each folder should contain before being staged.')
+                print('You can give a comma-separated list to stage a folder in chunks.')
+            lim = input('Staging limit(s) for {}? '.format(entry))
+            while csnum.fullmatch(lim) is None:
+                print("That's not right. Enter something like 6 or 4,4,3.")
                 lim = input('Staging limit(s) for {}? '.format(entry))
-                while csnum.fullmatch(lim) is None:
-                    print("That's not right. Enter something like 6 or 4,4,3.")
-                    lim = input('Staging limit(s) for {}? '.format(entry))
-                config.set(limits, entry, lim)
-                isNewConfig = True
-    else:
-        print('No unstaged folders detected.')
+            config.set(limits, entry, lim)
+            isNewConfig = True
+    if unlimited == 0:
+        print('There are no unstaged folders without limits set.')
+        print('You can edit existing limits with the --reset-limits option.')
 if args.mv_lims:
     if len(config.options(limits)) > 0:
         print('Please give the number of episodes each folder should contain before being staged.')
