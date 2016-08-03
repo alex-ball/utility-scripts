@@ -739,8 +739,8 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims o
                 newEntry = earliestDate.strftime('%Y%m%d-') + entry
                 os.rename(os.path.join(audiobookDir, entry), os.path.join(audiobookDir, newEntry))
                 if len(lims) > 1:
-                    os.mkdirs(os.path.join(audiobookDir, entry))
-                    lims.pop[0]
+                    os.makedirs(os.path.join(audiobookDir, entry))
+                    lims.pop()[0]
                     limstring = ','.join(lims)
                     config.set(limits, entry, limstring)
                 else:
