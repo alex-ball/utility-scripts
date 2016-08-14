@@ -340,7 +340,7 @@ def download(source, target):
         with open(target, "wb") as f:
             headers = { 'User-Agent': userAgent }
             # Streaming here to allow progress bar
-            r = requests.get(source, headers=headers, allow_redirects=True, stream=True)
+            r = requests.get(source, headers=headers, allow_redirects=True, stream=True, timeout=120)
             print('...and saving to {}.'.format(target))
             # Could just f.write(r.content), but here we implement a simple progress bar.
             raw_length = r.headers.get('content-length')
@@ -354,10 +354,24 @@ def download(source, target):
                         f.write(chunk)
                         f.flush()
                 print('') # start newline
-    except URLError as e:
-        print('Something went wrong with the Internet!')
-        print(e)
+    except requests.exceptions.ConnectionError:
+        print('Could not download: network problem')
         print('Skipping...')
+        return False
+    except requests.exceptions.HTTPError:
+        print('Could not download: invalid HTTP response')
+        print('Skipping...')
+        return False
+    except requests.exceptions.TooManyRedirects:
+        print('Could not download: too many redirects')
+        print('Skipping...')
+        return False
+    except requests.exceptions.Timeout:
+        print('Could not download: response took too long')
+        # This may result in incomplete downloads blocking future attempts
+        if os.path.isfile(target):
+            os.remove(target)
+        print('Removing partial download and skipping...')
         return False
     except IOError:
         print('Cannot save file: input/output error.')
