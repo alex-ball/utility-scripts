@@ -1,0 +1,33 @@
+#! /bin/zsh
+
+THIS=`basename "$0"`
+
+usage() {
+  echo "Usage: $THIS [-a Path to Atom dictionaries] [-s Path to system dictionaries]" 1>&2; exit 1;
+}
+
+ATOM_DIC=/opt/atom/resources/app.asar.unpacked/node_modules/spell-check/node_modules/spellchecker/vendor/hunspell_dictionaries
+SYS_DIC=/usr/share/hunspell
+
+while getopts ":a:s:" opt
+do
+  case $opt in
+    a)
+      ATOM_DIC="$OPTARG"
+      ;;
+    s)
+      SYS_DIC="$OPTARG"
+      ;;
+    ?)
+      usage
+      ;;
+  esac
+done
+
+for file in $SYS_DIC/*.{aff,dic}
+  do sudo ln -s -f $file ${file/$SYS_DIC/$ATOM_DIC}
+  done
+
+echo "Atom can now see the following dictionary files:"
+
+ls $ATOM_DIC

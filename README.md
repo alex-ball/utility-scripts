@@ -40,10 +40,10 @@ A collection of command-line scripts that make my life easier:
     an 'audiobook' queue; unfortunately it is not yet clever enough to date the
     the individual audiobook folders so you have to do that manually when you
     think the folder is full enough.
-    
+
     The script has become quite complicated, so as well as the standard Python
     libraries it also relies on
-    
+
       * the non-standard libraries [`requests`](http://docs.python-requests.org/),
         [`dateutil`](https://dateutil.readthedocs.org/),
         [`clint`](https://pypi.python.org/pypi/clint/) and
@@ -52,3 +52,11 @@ A collection of command-line scripts that make my life easier:
         [`aacgain`](http://aacgain.altosdesign.com/) and
         [`vorbisgain`](https://sjeng.org/vorbisgain.html);
       * [`get_iplayer`](http://www.infradead.org/get_iplayer/html/get_iplayer.html).
+
+  * **fix-atom-spellcheck:** Add system spellcheck dictionaries to Atom editor
+
+    The [Atom editor](https://atom.io/) spell checker responds to the system
+    language, but on Linux systems only looks at the dictionaries that it ships
+    with, i.e. American English. This script adds the system's dictionaries to
+    Atom's dictionary folder. It was worth scripting since this must be redone
+    every time the software gets updated.
