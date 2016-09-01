@@ -13,7 +13,7 @@ from clint.textui import progress, colored
 from blist import sorteddict
 
 # Also requires external utilities: get_iplayer, aacgain, mp3gain, vorbisgain
-getiplayer = [ 'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--attempts', '3', '--nopurge', '--nocopyright', '--type', 'radio', '-g' ]
+getiplayer = [ 'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--attempts', '3', '--nopurge', '--nocopyright', '-q', '--type', 'radio', '-g' ]
 getiplayerP = getiplayer + ['--file-prefix', '<firstbcast>@<nameshort>']
 getiplayerA = getiplayer + ['-s', '--subdir-format', '<name>', '--file-prefix', '<lastbcast>@<senum>-<episodeshort>']
 aacgain = [ 'aacgain', '-p', '-q', '-k', '-r', '-e' ]
