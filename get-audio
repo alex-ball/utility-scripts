@@ -9,8 +9,8 @@ from xml.dom import minidom, Node
 from dateutil import parser as dateparser
 from dateutil.tz import *
 import urllib3.util, requests
-from clint.textui import progress # Not on Trusty
-from blist import sorteddict # Not on Trusty
+from clint.textui import progress, colored
+from blist import sorteddict
 
 # Also requires external utilities: get_iplayer, aacgain, mp3gain, vorbisgain
 getiplayer = [ 'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--attempts', '3', '--nopurge', '--nocopyright', '--type', 'radio', '-g' ]
@@ -355,27 +355,27 @@ def download(source, target):
                         f.flush()
                 print('') # start newline
     except requests.exceptions.ConnectionError:
-        print('Could not download: network problem')
-        print('Skipping...')
+        print(colored.red('Could not download: network problem'))
+        print(colored.red('Skipping...'))
         return False
     except requests.exceptions.HTTPError:
-        print('Could not download: invalid HTTP response')
-        print('Skipping...')
+        print(colored.red('Could not download: invalid HTTP response'))
+        print(colored.red('Skipping...'))
         return False
     except requests.exceptions.TooManyRedirects:
-        print('Could not download: too many redirects')
-        print('Skipping...')
+        print(colored.red('Could not download: too many redirects'))
+        print(colored.red('Skipping...'))
         return False
     except requests.exceptions.Timeout:
-        print('Could not download: response took too long')
+        print(colored.red('Could not download: response took too long'))
         # This may result in incomplete downloads blocking future attempts
         if os.path.isfile(target):
             os.remove(target)
-        print('Removing partial download and skipping...')
+        print(colored.red('Removing partial download and skipping...'))
         return False
     except IOError:
-        print('Cannot save file: input/output error.')
-        print('Skipping...')
+        print(colored.red('Cannot save file: input/output error.'))
+        print(colored.red('Skipping...'))
         return False
     if os.path.splitext(target)[1] == ".mp3":
         subprocess.call(mp3gain + [ target ])
@@ -389,10 +389,10 @@ def parsePubDate(pubDateString):
     try:
         pubDate = dateparser.parse(pubDateString, tzinfos=TZOFFSETS)
     except ValueError:
-        print('Failed to parse timestamp: {}'.format(pubDateString))
+        print(colored.red('Failed to parse timestamp: {}'.format(pubDateString)))
         pubDate = datetime.datetime(1970,1,1,tzinfo=tzutc())
     if pubDate.tzinfo is None:
-        print('DEBUG: could not get timezone from {}'.format(pubDateString))
+        print(colored.yellow('DEBUG: could not get timezone from {}'.format(pubDateString)))
         pubDate = pubDate.replace(tzinfo=tzlocal())
     return pubDate
 
@@ -408,7 +408,7 @@ def getTimestamp(url):
     r = requests.get(url, allow_redirects=False)
     if 'location' in r.headers:
         return getTimestamp(r.headers['location'])
-    print('Timestamp lookup via HTTP failed')
+    print(colored.red('Timestamp lookup via HTTP failed'))
     return datetime.datetime(1970,1,1,tzinfo=tzutc())
 
 def getPodcasts(idstring, url):
@@ -429,26 +429,26 @@ def getPodcasts(idstring, url):
             print('No recent changes to {} feed.'.format(idstring))
             return True
         elif not r.status_code == requests.codes.ok:
-            print('Could not open supplied URL for {}: error code {}.'.format(idstring, r.status_code))
+            print(colored.red('Could not open supplied URL for {}: error code {}.'.format(idstring, r.status_code)))
             return False
     except requests.exceptions.ConnectionError:
-        print('Could not open supplied URL for {}: network problem'.format(idstring))
+        print(colored.red('Could not open supplied URL for {}: network problem'.format(idstring)))
         return False
     except requests.exceptions.HTTPError:
-        print('Could not open supplied URL for {}: invalid HTTP response'.format(idstring))
+        print(colored.red('Could not open supplied URL for {}: invalid HTTP response'.format(idstring)))
         return False
     except requests.exceptions.TooManyRedirects:
-        print('Could not open supplied URL for {}: too many redirects'.format(idstring))
+        print(colored.red('Could not open supplied URL for {}: too many redirects'.format(idstring)))
         return False
     except requests.exceptions.Timeout:
-        print('Could not open supplied URL for {}: response took too long'.format(idstring))
+        print(colored.red('Could not open supplied URL for {}: response took too long'.format(idstring)))
         return False
 
     # Having got this far, it is worth checking the XML for new podcasts
     try:
         feedxml = minidom.parseString(r.content)
     except StandardError as e:
-        print('Error parsing feed for {} ({}): skipping.'.format(idstring, e))
+        print(colored.red('Error parsing feed for {} ({}): skipping.'.format(idstring, e)))
         return False
 
     # Switch for detecting if a download occurred
@@ -479,7 +479,7 @@ def getPodcasts(idstring, url):
                     if enclosures.length > 0:
                         url = enclosures[0].attributes['url'].value
                         if len(url) == 0:
-                            print('Skipping podcast from {}: enclosure empty.'.format(pubDate.strftime('%Y-%m-%d %H:%M')))
+                            print(colored.yellow('Skipping podcast from {}: enclosure empty.'.format(pubDate.strftime('%Y-%m-%d %H:%M'))))
                             continue
                         # Fix pubDate if time is midnight (hence probably omitted)
                         if pubDate.hour + pubDate.minute == 0:
@@ -496,7 +496,7 @@ def getPodcasts(idstring, url):
                     break
         elif feedxml.firstChild.attributes['version'].value == '1.0':
             # RSS 1: I will write support for this when I find a feed that uses it
-            print('{} uses an RSS 1.0 feed, which isn\'t supported yet.'.format(idstring))
+            print(colored.red('{} uses an RSS 1.0 feed, which isn\'t supported yet.'.format(idstring)))
             return False
     elif rootElement.tagName == 'feed':
         # Atom
@@ -516,7 +516,7 @@ def getPodcasts(idstring, url):
                 if enclosures.length > 0:
                     url = enclosures[0].attributes['href'].value
                     if len(url) == 0:
-                        print('Skipping podcast from {}: enclosure empty.'.format(pubDate.strftime('%Y-%m-%d %H:%M')))
+                        print(colored.yellow('Skipping podcast from {}: enclosure empty.'.format(pubDate.strftime('%Y-%m-%d %H:%M'))))
                         continue
                     # Fix pubDate if time is midnight (hence probably omitted)
                     if pubDate.hour + pubDate.minute == 0:
@@ -532,7 +532,7 @@ def getPodcasts(idstring, url):
                 #+ as well. If a feed you like does it differently, remove this clause.
                 break
     else:
-        print('{} uses an unknown feed type.'.format(idstring))
+        print(colored.red('{} uses an unknown feed type.'.format(idstring)))
         return False
 
     # Informative message if feed does not contain podcasts newer than startDate
@@ -578,8 +578,8 @@ if args.p or args.podcast_ID or args.show_name:
         try:
             os.mkdirs(podcastDir)
         except OSError:
-            print('Cannot write to {}.'.format(podcastDir))
-            print('Please correct configuration before continuing.')
+            print(colored.red('Cannot write to {}.'.format(podcastDir)))
+            print(colored.red('Please correct configuration before continuing.'))
             sys.exit(1)
 
     if args.p:
@@ -609,11 +609,11 @@ if args.p or args.podcast_ID or args.show_name:
                 getPodcasts(args.podcast_ID, config.get(podcasts, args.podcast_ID))
                 print('')
             else:
-                print('Podcast {} not listed in config file.'.format(args.podcast_ID))
-                print('Please correct configuration and try again.')
+                print(colored.red('Podcast {} not listed in config file.'.format(args.podcast_ID)))
+                print(colored.red('Please correct configuration and try again.'))
         if args.show_name:
             if not args.show_name in config.options(shows):
-                print('INFO: Show title {} not listed in config file.'.format(args.show_name))
+                print(colored.yellow('INFO: Show title {} not listed in config file.'.format(args.show_name)))
             with tempfile.TemporaryDirectory(prefix=progName) as tdir:
                 subprocess.call(getiplayerP + ['-o', tdir, '--search', args.show_name])
                 print('')
@@ -628,8 +628,8 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID:
         try:
             os.mkdirs(audiobookDir)
         except OSError:
-            print('Cannot write to {}.'.format(audiobookDir))
-            print('Please correct configuration before continuing.')
+            print(colored.red('Cannot write to {}.'.format(audiobookDir)))
+            print(colored.red('Please correct configuration before continuing.'))
             sys.exit(1)
 
     if args.a:
@@ -777,7 +777,7 @@ if isNewConfig:
         with open(config_file, 'w') as f:
             config.write(f)
     except IOError:
-        print('Cannot write config file; please move script to a writeable directory.')
+        print(colored.red('Cannot write config file; please move script to a writeable directory.'))
         sys.exit(1)
 
 # That's all
