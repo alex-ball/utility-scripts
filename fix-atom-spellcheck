@@ -3,13 +3,13 @@
 THIS=`basename "$0"`
 
 usage() {
-  echo "Usage: $THIS [-a Path to Atom dictionaries] [-s Path to system dictionaries]" 1>&2; exit 1;
+  echo "Usage: $THIS [-a Path to Atom dictionaries] [-s Path to system dictionaries]" 1>&2
 }
 
-ATOM_DIC=/opt/atom/resources/app.asar.unpacked/node_modules/spell-check/node_modules/spellchecker/vendor/hunspell_dictionaries
+ATOM_DIC=/opt/atom/resources/app.asar.unpacked/node_modules/spellchecker/vendor/hunspell_dictionaries
 SYS_DIC=/usr/share/hunspell
 
-while getopts ":a:s:" opt
+while getopts ":a:s:h" opt
 do
   case $opt in
     a)
@@ -18,11 +18,36 @@ do
     s)
       SYS_DIC="$OPTARG"
       ;;
+    h)
+      usage
+      exit 0
+      ;;
     ?)
       usage
+      exit 1
       ;;
   esac
 done
+
+(( STATUS = 0 ))
+
+if [[ ! -d "$ATOM_DIC" ]]
+then
+  echo "The path to Atom dictionaries does not exist. Please check and try again."
+  (( STATUS += 2 ))
+fi
+
+if [[ ! -d "$SYS_DIC" ]]
+then
+  echo "The path to system dictionaries does not exist. Please check and try again."
+  (( STATUS += 4 ))
+fi
+
+if (( $STATUS != 0 ))
+then
+  usage
+  exit $STATUS
+fi
 
 for file in $SYS_DIC/*.{aff,dic}
   do sudo ln -s -f $file ${file/$SYS_DIC/$ATOM_DIC}
@@ -30,4 +55,4 @@ for file in $SYS_DIC/*.{aff,dic}
 
 echo "Atom can now see the following dictionary files:"
 
-ls $ATOM_DIC
+cd $ATOM_DIC && ls --color=auto *.{aff,dic}
