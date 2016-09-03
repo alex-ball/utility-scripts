@@ -328,6 +328,11 @@ else:
         if earliestDate < now:
             startDate = earliestDate
 
+# Convert to hours ago for use with get_iplayer
+podcastSpan = now - startDate
+podcastSpanHours = podcastSpan.seconds // 3600
+getiplayerP.extend(['--available-since', podcastSpanHours])
+
 ### PODCATCHING FUNCTIONS
 
 def download(source, target):
