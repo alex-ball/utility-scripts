@@ -351,21 +351,33 @@ def download(source, target):
             raw_length = r.headers.get('content-length')
             if raw_length is None:
                 # No declared length
-                f.write(r.content)
+                for chunk in progress.mill(r.iter_content(chunk_size=1024), expected_size=None):
+                    f.write(chunk)
             else:
                 total_length = int(raw_length)
                 for chunk in progress.bar(r.iter_content(chunk_size=1024), expected_size=(total_length/1024) + 1): 
-                    if chunk:
-                        f.write(chunk)
-                        f.flush()
+                    f.write(chunk)
                 print('') # start newline
+                statinfo = os.stat(target)
+                fsizediff = abs(total_length - statinfo.st_size)
+                if fsizediff > 1024:
+                    # More than 1kB difference in expected_size
+                    print(colored.yellow('DEBUG: Unexpected file size!'))
     except requests.exceptions.ConnectionError:
         print(colored.red('Could not download: network problem'))
-        print(colored.red('Skipping...'))
+        if os.path.isfile(target):
+            os.remove(target)
+            print(colored.red('Removing partial download and skipping...'))
+        else:
+            print(colored.red('Skipping...'))
         return False
     except requests.exceptions.HTTPError:
         print(colored.red('Could not download: invalid HTTP response'))
-        print(colored.red('Skipping...'))
+        if os.path.isfile(target):
+            os.remove(target)
+            print(colored.red('Removing partial download and skipping...'))
+        else:
+            print(colored.red('Skipping...'))
         return False
     except requests.exceptions.TooManyRedirects:
         print(colored.red('Could not download: too many redirects'))
@@ -373,14 +385,19 @@ def download(source, target):
         return False
     except requests.exceptions.Timeout:
         print(colored.red('Could not download: response took too long'))
-        # This may result in incomplete downloads blocking future attempts
         if os.path.isfile(target):
             os.remove(target)
-        print(colored.red('Removing partial download and skipping...'))
+            print(colored.red('Removing partial download and skipping...'))
+        else:
+            print(colored.red('Skipping...'))
         return False
     except IOError:
         print(colored.red('Cannot save file: input/output error.'))
-        print(colored.red('Skipping...'))
+        if os.path.isfile(target):
+            os.remove(target)
+            print(colored.red('Removing partial download and skipping...'))
+        else:
+            print(colored.red('Skipping...'))
         return False
     if os.path.splitext(target)[1] == ".mp3":
         subprocess.call(mp3gain + [ target ])
