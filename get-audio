@@ -330,8 +330,8 @@ else:
 
 # Convert to hours ago for use with get_iplayer
 podcastSpan = now - startDate
-podcastSpanHours = podcastSpan.seconds // 3600
-getiplayerP.extend(['--available-since', podcastSpanHours])
+podcastSpanHours = ( podcastSpan.days * 24 ) + ( podcastSpan.seconds // 3600 )
+getiplayerP.extend(['--available-since', str(podcastSpanHours)])
 
 ### PODCATCHING FUNCTIONS
 
