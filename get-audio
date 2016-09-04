@@ -13,9 +13,10 @@ from clint.textui import progress, colored
 from blist import sorteddict
 
 # Also requires external utilities: get_iplayer, aacgain, mp3gain, vorbisgain
-getiplayer = [ 'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--attempts', '3', '--nopurge', '--nocopyright', '-q', '--type', 'radio', '-g' ]
-getiplayerP = getiplayer + ['--file-prefix', '<firstbcast>@<nameshort>']
-getiplayerA = getiplayer + ['-s', '--subdir-format', '<name>', '--file-prefix', '<lastbcast>@<senum>-<episodeshort>']
+getiplayer = [ 'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--nopurge', '--nocopyright', '--type', 'radio']
+getiplayerG = getiplayer + ['--attempts', '3', '-g' ]
+getiplayerP = getiplayerG + ['--file-prefix', '<firstbcast>@<nameshort>']
+getiplayerA = getiplayerG + ['-s', '--subdir-format', '<name>', '--file-prefix', '<lastbcast>@<senum>-<episodeshort>']
 aacgain = [ 'aacgain', '-p', '-q', '-k', '-r', '-e' ]
 mp3gain = [ 'aacgain', '-p', '-q', '-k', '-r', '-e' ]
 vorbisgain = [ 'vorbisgain', '-p', '-q', '-f' ]
@@ -592,6 +593,14 @@ def enqueueShows(tdir):
 
 ### DOWNLOADING
 
+# Refresh iPlayer cache (quietly) if about to do a block of recording;
+# for this we perform a very unlikely search
+if args.a or args.prog_name or args.episode or args.iplayer_ID or (args.p and len(config.options(shows)) > 0) or args.show_name:
+    print('Limbering up with an unlikely search...')
+    exe = getiplayer + ['-q', 'zxcvbnm']
+    subprocess.call(exe)
+    print('')
+
 # Adding files to podcast queue
 
 if args.p or args.podcast_ID or args.show_name:
@@ -612,7 +621,7 @@ if args.p or args.podcast_ID or args.show_name:
             for idstring, url in config.items(podcasts):
                 getPodcasts(idstring, url)
                 print('')
-        if  len(config.options(shows)) > 0:
+        if len(config.options(shows)) > 0:
             print('-------------------------------------------')
             print('Looking for podcast material on iPlayer ')
             print('-------------------------------------------')
