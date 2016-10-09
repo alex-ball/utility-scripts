@@ -324,6 +324,17 @@ else:
                     continue
                 timestamp = os.path.getmtime(os.path.join(podcastDir, entry))
                 foundDate = datetime.datetime.fromtimestamp(timestamp, tz=tzutc())
+                # Does this match the filename?
+                parsedName = entry.split(poddate[-1], 1)
+                nameDateString = "{}{}".format(parsedName[0], poddate[-1])
+                predictedDateString = foundDate.strftime(poddate)
+                if predictedDateString != nameDateString:
+                    nameDate = dateparser.parse(parsedName[0], dayfirst=False, yearfirst=True)
+                    if nameDate.tzinfo is None:
+                        nameDate = nameDate.replace(tzinfo=tzlocal())
+                    os.utime(os.path.join(podcastDir, entry), times=(nameDate.timestamp(), nameDate.timestamp()))
+                    foundDate = nameDate
+                # Is this the earliest so far?
                 if earliestDate > foundDate:
                     earliestDate = foundDate
         if earliestDate < now:
@@ -361,9 +372,9 @@ def download(source, target):
                 print('') # start newline
                 statinfo = os.stat(target)
                 fsizediff = abs(total_length - statinfo.st_size)
-                if fsizediff > 1024:
-                    # More than 1kB difference in expected_size
-                    print(colored.yellow('DEBUG: Unexpected file size!'))
+                if fsizediff > 4096:
+                    # More than 4kB difference in expected_size
+                    print(colored.yellow('DEBUG: Expected {}, got {}, diff {}.'.format(str(total_length), str(statinfo.st_size), str(fsizediff))))
     except requests.exceptions.ConnectionError:
         print(colored.red('Could not download: network problem'))
         if os.path.isfile(target):
