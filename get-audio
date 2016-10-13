@@ -329,10 +329,13 @@ else:
                 nameDateString = "{}{}".format(parsedName[0], poddate[-1])
                 predictedDateString = foundDate.strftime(poddate)
                 if predictedDateString != nameDateString:
+                    print("Warning: {} had timestamp {}.".format(entry, predictedDateString[0:-1]))
                     nameDate = dateparser.parse(parsedName[0], dayfirst=False, yearfirst=True)
                     if nameDate.tzinfo is None:
-                        nameDate = nameDate.replace(tzinfo=tzlocal())
-                    os.utime(os.path.join(podcastDir, entry), times=(nameDate.timestamp(), nameDate.timestamp()))
+                        nameDate = nameDate.replace(tzinfo=tzutc())
+                    newPredictedDateString = nameDate.strftime(poddate)
+                    print("I would restamp it to {}".format(newPredictedDateString[0:-1]))
+                    # os.utime(os.path.join(podcastDir, entry), times=(nameDate.timestamp(), nameDate.timestamp()))
                     foundDate = nameDate
                 # Is this the earliest so far?
                 if earliestDate > foundDate:
@@ -427,7 +430,9 @@ def parsePubDate(pubDateString):
         pubDate = datetime.datetime(1970,1,1,tzinfo=tzutc())
     if pubDate.tzinfo is None:
         print(colored.yellow('DEBUG: could not get timezone from {}'.format(pubDateString)))
-        pubDate = pubDate.replace(tzinfo=tzlocal())
+        pubDate = pubDate.replace(tzinfo=tzutc())
+    # Convert to UTC: this affects strftime but not the timestamp
+    pubDate = datetime.datetime.fromtimestamp(pubDate.timestamp(), tz=tzutc())
     return pubDate
 
 # The BBC has stopped giving a time-of-day for podcasts in the RSS feed.
@@ -595,6 +600,8 @@ def enqueueShows(tdir):
             # Extract date
             entryTuple = entry.partition('@')
             bcastDate = dateparser.parse(fixGetIPlayerDate(entryTuple[0]))
+            # Convert to UTC: this affects strftime but not the timestamp
+            bcastDate = datetime.datetime.fromtimestamp(bcastDate.timestamp(), tz=tzutc())
             # Move to queue
             newFile = bcastDate.strftime(poddate) + entryTuple[2]
             newPath = os.path.join(podcastDir, newFile)
