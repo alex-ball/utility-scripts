@@ -52,7 +52,7 @@ def isodate(s):
     try:
         d = dateparser.parse(s)
         if d.tzinfo is None:
-            d = d.replace(tzinfo=tzlocal())
+            d = d.replace(tzinfo=tzutc())
         return d
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
@@ -334,8 +334,8 @@ else:
                     if nameDate.tzinfo is None:
                         nameDate = nameDate.replace(tzinfo=tzutc())
                     newPredictedDateString = nameDate.strftime(poddate)
-                    print("I would restamp it to {}".format(newPredictedDateString[0:-1]))
-                    # os.utime(os.path.join(podcastDir, entry), times=(nameDate.timestamp(), nameDate.timestamp()))
+                    print("Restamping it to {}".format(newPredictedDateString[0:-1]))
+                    os.utime(os.path.join(podcastDir, entry), times=(nameDate.timestamp(), nameDate.timestamp()))
                     foundDate = nameDate
                 # Is this the earliest so far?
                 if earliestDate > foundDate:
@@ -399,6 +399,14 @@ def download(source, target):
         print(colored.red('Skipping...'))
         return False
     except requests.exceptions.Timeout:
+        print(colored.red('Could not download: response took too long'))
+        if os.path.isfile(target):
+            os.remove(target)
+            print(colored.red('Removing partial download and skipping...'))
+        else:
+            print(colored.red('Skipping...'))
+        return False
+    except TimeoutError:
         print(colored.red('Could not download: response took too long'))
         if os.path.isfile(target):
             os.remove(target)
@@ -634,7 +642,7 @@ if args.p or args.podcast_ID or args.show_name:
     if args.p:
         if len(config.options(podcasts)) > 0:
             print('-------------------------------------------')
-            print('Looking for podcasts since {}'.format(startDate.strftime('%Y-%m-%d %H:%M')))
+            print('Looking for podcasts since {} UTC'.format(startDate.strftime('%Y-%m-%d %H:%M')))
             print('-------------------------------------------')
             for idstring, url in config.items(podcasts):
                 getPodcasts(idstring, url)
