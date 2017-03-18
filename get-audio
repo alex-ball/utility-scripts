@@ -1,29 +1,49 @@
 #! /usr/bin/python3
 
-### DEPENDENCIES
-
+# DEPENDENCIES
+# ============
+#
 # Standard library
-import re, datetime, tempfile, shutil, configparser, os, argparse, subprocess, sys
+
+import re
+import datetime
+import tempfile
+import shutil
+import configparser
+import os
+import argparse
+import subprocess
+import sys
 from xml.dom import minidom, Node
-# Non-standard libraries: python3-dateutil, python3-requests, python3-clint, python3-blist
+
+# Non-standard libraries: python3-dateutil, python3-requests, python3-clint,
+# python3-blist
+
 from dateutil import parser as dateparser
 from dateutil.tz import *
-import urllib3.util, requests
+import urllib3.util
+import requests
 from clint.textui import progress, colored
 from blist import sorteddict
 
 # Also requires external utilities: get_iplayer, aacgain, mp3gain, vorbisgain
-getiplayer = [ 'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--nopurge', '--nocopyright', '--type', 'radio', '--radiomode', 'better']
-getiplayerG = getiplayer + ['--attempts', '3', '-g' ]
+
+getiplayer = [
+    'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--nopurge',
+    '--nocopyright', '--type', 'radio', '--radiomode', 'better']
+getiplayerG = getiplayer + ['--attempts', '3', '-g']
 getiplayerP = getiplayerG + ['--file-prefix', '<lastbcast>@<nameshort>']
-getiplayerA = getiplayerG + ['-s', '--subdir-format', '<name>', '--file-prefix', '<lastbcast>@<senum>-<episodeshort>']
-aacgain = [ 'aacgain', '-p', '-q', '-k', '-r', '-e' ]
-mp3gain = [ 'aacgain', '-p', '-q', '-k', '-r', '-e' ]
-vorbisgain = [ 'vorbisgain', '-p', '-q', '-f' ]
+getiplayerA = getiplayerG + [
+    '-s', '--subdir-format', '<name>', '--file-prefix',
+    '<lastbcast>@<senum>-<episodeshort>']
+aacgain = ['aacgain', '-p', '-q', '-k', '-r', '-e']
+mp3gain = ['aacgain', '-p', '-q', '-k', '-r', '-e']
+vorbisgain = ['vorbisgain', '-p', '-q', '-f']
 
 
-### SETTING UP
-
+# SETTING UP
+# ==========
+#
 # Calculate where the config file should be (in same directory as script)
 
 script_path = os.path.normpath(sys.argv[0])
@@ -42,10 +62,11 @@ audiobookFallbackDir = os.path.expanduser('~/Audio/Audiobooks-Staging/')
 
 # Time utilities
 
-TZOFFSETS = {\
+TZOFFSETS = {
     "EET": 7200}
 
 now = datetime.datetime.now(tzlocal())
+
 
 def isodate(s):
     "Parse string as ISO 8601 format year."
@@ -58,112 +79,135 @@ def isodate(s):
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)
 
+
 # Command-line arguments
 
-parser = argparse.ArgumentParser(description='''
-Downloads audio content from podcast feeds and BBC iPlayer, and saves
-them to Podcast and Audiobook queues. Podcasts are identified by a
-short code (that you choose) and a feed URL. BBC iPlayer content is
-identified by get_iplayer search terms.'''\
-    ,epilog='Configuration options are stored in {}'.format(config_file))
-parser.add_argument('-v', '--version'\
-    ,action='version'\
-    ,version='%(prog)s ' + version)
-parser.add_argument('-P', '--no-podcasts'\
-    ,help='skip downloading configured podcasts'\
-    ,action='store_false'\
-    ,dest='p')
-parser.add_argument('-A', '--no-audiobooks'\
-    ,help='skip downloading configured audiobooks'\
-    ,action='store_false'\
-    ,dest='a')
-parser.add_argument('-p', '--podcast'\
-    ,help='ID of just one podcast to download'\
-    ,action='store'\
-    ,dest='podcast_ID')
-parser.add_argument('--add-podcast'\
-    ,help='subscribe to new podcast'\
-    ,action='store'\
-    ,dest='mk_podcast'
-    ,metavar='PODCAST_ID=URL')
-parser.add_argument('--remove-podcast'\
-    ,help='unsubscribe from podcast'\
-    ,action='store'\
-    ,dest='rm_podcast'
-    ,metavar='PODCAST_ID')
-parser.add_argument('-s', '--show'\
-    ,help='name of iPlayer programme to download as podcast'\
-    ,action='store'\
-    ,dest='show_name')
-parser.add_argument('--add-show'\
-    ,help='subscribe to new iPlayer programme as podcast'\
-    ,action='store'\
-    ,dest='mk_show'
-    ,metavar='SHOW_NAME')
-parser.add_argument('--remove-show'\
-    ,help='unsubscribe from iPlayer programme as podcast'\
-    ,action='store'\
-    ,dest='rm_show'
-    ,metavar='SHOW_NAME')
-parser.add_argument('-i', '--pid'\
-    ,help='PID of iPlayer programme or series to download'\
-    ,action='store'\
-    ,dest='iplayer_ID')
-parser.add_argument('--add-pid'\
-    ,help='save iPlayer search for programme PID'\
-    ,action='store'\
-    ,dest='mk_pid'
-    ,metavar='IPLAYER_ID')
-parser.add_argument('--remove-pid'\
-    ,help='remove saved iPlayer search for programme PID'\
-    ,action='store'\
-    ,dest='rm_pid'
-    ,metavar='IPLAYER_ID')
-parser.add_argument('-n', '--name'\
-    ,help='name of iPlayer programme to download'\
-    ,action='store'\
-    ,dest='prog_name')
-parser.add_argument('--add-name'\
-    ,help='save iPlayer search for programme by name'\
-    ,action='store'\
-    ,dest='mk_prog'
-    ,metavar='PROG_NAME')
-parser.add_argument('--remove-name'\
-    ,help='removed saved iPlayer search for programme by name'\
-    ,action='store'\
-    ,dest='rm_prog'
-    ,metavar='PROG_NAME')
-parser.add_argument('-e', '--episode'\
-    ,help='episode title of iPlayer programme to download'\
-    ,action='store'\
-    ,dest='episode')
-parser.add_argument('--add-episode'\
-    ,help='save iPlayer search for episodes by title'\
-    ,action='store'\
-    ,dest='mk_episode'
-    ,metavar='EPISODE')
-parser.add_argument('--remove-episode'\
-    ,help='remove saved iPlayer search for episodes by title'\
-    ,action='store'\
-    ,dest='rm_episode'
-    ,metavar='EPISODE')
-parser.add_argument('--set-limits'\
-    ,help='schedule staging of audiobooks by number of episodes'\
-    ,action='store_true'\
-    ,dest='mk_lims')
-parser.add_argument('--reset-limits'\
-    ,help='amend existing scheduled rules for audiobooks'\
-    ,action='store_true'\
-    ,dest='mv_lims')
-parser.add_argument('--clean-limits'\
-    ,help='clear old scheduling rules for audiobooks'\
-    ,action='store_true'\
-    ,dest='rm_lims')
-parser.add_argument('date'\
-    ,help='since when to download podcasts, as yyyy-mm-dd'\
-    ,type=isodate
-    ,nargs='?'\
-    ,default=None)
+parser = argparse.ArgumentParser(
+    description='Downloads audio content from podcast feeds and BBC iPlayer,'
+    ' and saves them to Podcast and Audiobook queues. Podcasts are identified'
+    ' by a short code (that you choose) and a feed URL. BBC iPlayer content is'
+    ' identified by get_iplayer search terms.',
+    epilog='Configuration options are stored in {}'.format(config_file))
+parser.add_argument(
+    '-v', '--version',
+    action='version',
+    version='%(prog)s ' + version)
+parser.add_argument(
+    '-P', '--no-podcasts',
+    help='skip downloading configured podcasts',
+    action='store_false',
+    dest='p')
+parser.add_argument(
+    '-A', '--no-audiobooks',
+    help='skip downloading configured audiobooks',
+    action='store_false',
+    dest='a')
+parser.add_argument(
+    '-p', '--podcast',
+    help='ID of just one podcast to download',
+    action='store',
+    dest='podcast_ID')
+parser.add_argument(
+    '--add-podcast',
+    help='subscribe to new podcast',
+    action='store',
+    dest='mk_podcast',
+    metavar='PODCAST_ID=URL')
+parser.add_argument(
+    '--remove-podcast',
+    help='unsubscribe from podcast',
+    action='store',
+    dest='rm_podcast',
+    metavar='PODCAST_ID')
+parser.add_argument(
+    '-s', '--show',
+    help='name of iPlayer programme to download as podcast',
+    action='store',
+    dest='show_name')
+parser.add_argument(
+    '--add-show',
+    help='subscribe to new iPlayer programme as podcast',
+    action='store',
+    dest='mk_show',
+    metavar='SHOW_NAME')
+parser.add_argument(
+    '--remove-show',
+    help='unsubscribe from iPlayer programme as podcast',
+    action='store',
+    dest='rm_show',
+    metavar='SHOW_NAME')
+parser.add_argument(
+    '-i', '--pid',
+    help='PID of iPlayer programme or series to download',
+    action='store',
+    dest='iplayer_ID')
+parser.add_argument(
+    '--add-pid',
+    help='save iPlayer search for programme PID',
+    action='store',
+    dest='mk_pid',
+    metavar='IPLAYER_ID')
+parser.add_argument(
+    '--remove-pid',
+    help='remove saved iPlayer search for programme PID',
+    action='store',
+    dest='rm_pid',
+    metavar='IPLAYER_ID')
+parser.add_argument(
+    '-n', '--name',
+    help='name of iPlayer programme to download',
+    action='store',
+    dest='prog_name')
+parser.add_argument(
+    '--add-name',
+    help='save iPlayer search for programme by name',
+    action='store',
+    dest='mk_prog',
+    metavar='PROG_NAME')
+parser.add_argument(
+    '--remove-name',
+    help='removed saved iPlayer search for programme by name',
+    action='store',
+    dest='rm_prog',
+    metavar='PROG_NAME')
+parser.add_argument(
+    '-e', '--episode',
+    help='episode title of iPlayer programme to download',
+    action='store',
+    dest='episode')
+parser.add_argument(
+    '--add-episode',
+    help='save iPlayer search for episodes by title',
+    action='store',
+    dest='mk_episode',
+    metavar='EPISODE')
+parser.add_argument(
+    '--remove-episode',
+    help='remove saved iPlayer search for episodes by title',
+    action='store',
+    dest='rm_episode',
+    metavar='EPISODE')
+parser.add_argument(
+    '--set-limits',
+    help='schedule staging of audiobooks by number of episodes',
+    action='store_true',
+    dest='mk_lims')
+parser.add_argument(
+    '--reset-limits',
+    help='amend existing scheduled rules for audiobooks',
+    action='store_true',
+    dest='mv_lims')
+parser.add_argument(
+    '--clean-limits',
+    help='clear old scheduling rules for audiobooks',
+    action='store_true',
+    dest='rm_lims')
+parser.add_argument(
+    'date',
+    help='since when to download podcasts, as yyyy-mm-dd',
+    type=isodate,
+    nargs='?',
+    default=None)
 args = parser.parse_args()
 
 # Config file sections
@@ -180,22 +224,35 @@ limits = 'Limits'
 
 isNewConfig = False
 
-config = configparser.ConfigParser(dict_type=sorteddict, allow_no_value=True, delimiters=('=',), inline_comment_prefixes=(';',))
+config = configparser.ConfigParser(
+    dict_type=sorteddict,
+    allow_no_value=True,
+    delimiters=('=',),
+    inline_comment_prefixes=(';',))
 config.optionxform = lambda option: option
+
 if os.path.isfile(config_file):
     config.read(config_file)
 else:
-    print('Writing a new config file to {}. Edit as follows:'.format(config_file))
-    print('  - Set directories for saving files under "{}".'.format(queues))
-    print('  - Set podcast subscriptions under "{}" as PODCAST_ID = URL.'.format(podcasts))
-    print('    You can choose any PODCAST_ID but it must be filename-friendly.')
-    print('  - Add iPlayer programmes to download as if podcasts under "{}".'.format(shows))
-    print('  - Add iPlayer programmes to download as audiobooks under "{}".'.format(programmes))
-    print('  - Add iPlayer episode titles to download as audiobooks under "{}".'.format(episodes))
-    print('  - Add iPlayer PIDs to download as audiobooks under "{}".'.format(pids))
+    print('Writing a new config file to {}. Edit as follows:'
+          ''.format(config_file))
+    print('  - Set directories for saving files under "{}".'
+          ''.format(queues))
+    print('  - Set podcast subscriptions under "{}" as PODCAST_ID = URL.'
+          ''.format(podcasts))
+    print('    You can choose any PODCAST_ID but it must be filename-'
+          'friendly.')
+    print('  - Add iPlayer programmes to download as if podcasts under "{}".'
+          ''.format(shows))
+    print('  - Add iPlayer programmes to download as audiobooks under "{}".'
+          ''.format(programmes))
+    print('  - Add iPlayer episode titles to download as audiobooks under'
+          ' "{}".'.format(episodes))
+    print('  - Add iPlayer PIDs to download as audiobooks under "{}".'
+          ''.format(pids))
+
 
 # Convenience function for interpreting config file options
-
 def splitConfOpt(s):
     optTuple = s.partition('=')
     key = optTuple[0].strip()
@@ -205,9 +262,10 @@ def splitConfOpt(s):
         value = optTuple[2].strip()
     return [key, value]
 
+
 # Set up key variables
 
-if not queues in config:
+if queues not in config:
     config.add_section(queues)
     config.set(queues, 'podcasts', podcastFallbackDir)
     config.set(queues, 'audiobooks', audiobookFallbackDir)
@@ -215,7 +273,7 @@ if not queues in config:
 podcastDir = config.get(queues, 'podcasts', fallback=podcastFallbackDir)
 audiobookDir = config.get(queues, 'audiobooks', fallback=audiobookFallbackDir)
 
-if not podcasts in config:
+if podcasts not in config:
     config.add_section(podcasts)
     isNewConfig = True
 if args.mk_podcast:
@@ -231,7 +289,7 @@ if args.rm_podcast:
     else:
         print('Cannot find {} in config file.'.format(o[0]))
 
-if not shows in config:
+if shows not in config:
     config.add_section(shows)
     isNewConfig = True
 if args.mk_show:
@@ -247,7 +305,7 @@ if args.rm_show:
     else:
         print('Cannot find {} in config file.'.format(o[0]))
 
-if not programmes in config:
+if programmes not in config:
     config.add_section(programmes)
     isNewConfig = True
 if args.mk_prog:
@@ -258,12 +316,13 @@ if args.mk_prog:
 if args.rm_prog:
     o = splitConfOpt(args.rm_prog)
     if config.remove_option(programmes, o[0]):
-        print('You are no longer searching for programmes called {}.'.format(o[0]))
+        print('You are no longer searching for programmes called {}.'
+              ''.format(o[0]))
         isNewConfig = True
     else:
         print('Cannot find {} in config file.'.format(o[0]))
 
-if not episodes in config:
+if episodes not in config:
     config.add_section(episodes)
     isNewConfig = True
 if args.mk_episode:
@@ -274,12 +333,13 @@ if args.mk_episode:
 if args.rm_episode:
     o = splitConfOpt(args.rm_episode)
     if config.remove_option(episodes, o[0]):
-        print('You are no longer searching for episodes called {}.'.format(o[0]))
+        print('You are no longer searching for episodes called {}.'
+              ''.format(o[0]))
         isNewConfig = True
     else:
         print('Cannot find {} in config file.'.format(o[0]))
 
-if not pids in config:
+if pids not in config:
     config.add_section(pids)
     isNewConfig = True
 if args.mk_pid:
@@ -290,12 +350,13 @@ if args.mk_pid:
 if args.rm_pid:
     o = splitConfOpt(args.rm_pid)
     if config.remove_option(pids, o[0]):
-        print('You are no longer searching for series/shows with PID {}.'.format(o[0]))
+        print('You are no longer searching for series/shows with PID {}.'
+              ''.format(o[0]))
         isNewConfig = True
     else:
         print('Cannot find {} in config file.'.format(o[0]))
 
-# date/time prefix for podcasts: 12 characters 
+# date/time prefix for podcasts: 12 characters
 poddate = '%y%m%d-%H%M_'
 
 # Apply logic to options
@@ -323,19 +384,25 @@ else:
                 if entry.startswith('.'):
                     continue
                 timestamp = os.path.getmtime(os.path.join(podcastDir, entry))
-                foundDate = datetime.datetime.fromtimestamp(timestamp, tz=tzutc())
+                foundDate = datetime.datetime.fromtimestamp(
+                    timestamp, tz=tzutc())
                 # Does this match the filename?
                 parsedName = entry.split(poddate[-1], 1)
                 nameDateString = "{}{}".format(parsedName[0], poddate[-1])
                 predictedDateString = foundDate.strftime(poddate)
                 if predictedDateString != nameDateString:
-                    print("Warning: {} had timestamp {}.".format(entry, predictedDateString[0:-1]))
-                    nameDate = dateparser.parse(parsedName[0], dayfirst=False, yearfirst=True)
+                    print('Warning: {} had timestamp {}.'
+                          ''.format(entry, predictedDateString[0:-1]))
+                    nameDate = dateparser.parse(
+                        parsedName[0], dayfirst=False, yearfirst=True)
                     if nameDate.tzinfo is None:
                         nameDate = nameDate.replace(tzinfo=tzutc())
                     newPredictedDateString = nameDate.strftime(poddate)
-                    print("Restamping it to {}".format(newPredictedDateString[0:-1]))
-                    os.utime(os.path.join(podcastDir, entry), times=(nameDate.timestamp(), nameDate.timestamp()))
+                    print('Restamping it to {}'
+                          ''.format(newPredictedDateString[0:-1]))
+                    os.utime(
+                        os.path.join(podcastDir, entry),
+                        times=(nameDate.timestamp(), nameDate.timestamp()))
                     foundDate = nameDate
                 # Is this the earliest so far?
                 if earliestDate > foundDate:
@@ -344,12 +411,14 @@ else:
             startDate = earliestDate
 
 # Convert to hours ago for use with get_iplayer
+
 podcastSpan = now - startDate
-podcastSpanHours = ( podcastSpan.days * 24 ) + ( podcastSpan.seconds // 3600 )
+podcastSpanHours = (podcastSpan.days * 24) + (podcastSpan.seconds // 3600)
 getiplayerP.extend(['--available-since', str(podcastSpanHours)])
 
-### PODCATCHING FUNCTIONS
 
+# PODCATCHING FUNCTIONS
+# =====================
 def download(source, target):
     "Downloads resource at source URL to target filename in local directory."
     if os.path.isfile(target):
@@ -358,26 +427,34 @@ def download(source, target):
     print('Downloading {}...'.format(source))
     try:
         with open(target, "wb") as f:
-            headers = { 'User-Agent': userAgent }
+            headers = {'User-Agent': userAgent}
             # Streaming here to allow progress bar
-            r = requests.get(source, headers=headers, allow_redirects=True, stream=True, timeout=120)
+            r = requests.get(source, headers=headers, allow_redirects=True,
+                             stream=True, timeout=120)
             print('...and saving to {}.'.format(target))
-            # Could just f.write(r.content), but here we implement a simple progress bar.
+            # Could just f.write(r.content), but here we implement a simple
+            # progress bar.
             raw_length = r.headers.get('content-length')
             if raw_length is None:
                 # No declared length
-                for chunk in progress.mill(r.iter_content(chunk_size=1024), expected_size=None):
+                for chunk in progress.mill(
+                        r.iter_content(chunk_size=1024), expected_size=None):
                     f.write(chunk)
             else:
                 total_length = int(raw_length)
-                for chunk in progress.bar(r.iter_content(chunk_size=1024), expected_size=(total_length/1024) + 1): 
+                for chunk in progress.bar(
+                        r.iter_content(chunk_size=1024),
+                        expected_size=(total_length/1024) + 1):
                     f.write(chunk)
-                print('') # start newline
+                print('')  # start newline
                 statinfo = os.stat(target)
                 fsizediff = abs(total_length - statinfo.st_size)
                 if fsizediff > 4096:
                     # More than 4kB difference in expected_size
-                    print(colored.yellow('DEBUG: Expected {}, got {}, diff {}.'.format(str(total_length), str(statinfo.st_size), str(fsizediff))))
+                    print(colored.yellow(
+                        'DEBUG: Expected {}, got {}, diff {}.'.format(
+                            str(total_length), str(statinfo.st_size),
+                            str(fsizediff))))
     except requests.exceptions.ConnectionError:
         print(colored.red('Could not download: network problem'))
         if os.path.isfile(target):
@@ -423,10 +500,11 @@ def download(source, target):
             print(colored.red('Skipping...'))
         return False
     if os.path.splitext(target)[1] == ".mp3":
-        subprocess.call(mp3gain + [ target ])
+        subprocess.call(mp3gain + [target])
     elif os.path.splitext(target)[1] == ".ogg":
-        subprocess.call(vorbisgain + [ target ])
+        subprocess.call(vorbisgain + [target])
     return True
+
 
 def parsePubDate(pubDateString):
     "Parses publication date from podcast feed."
@@ -434,19 +512,22 @@ def parsePubDate(pubDateString):
     try:
         pubDate = dateparser.parse(pubDateString, tzinfos=TZOFFSETS)
     except ValueError:
-        print(colored.red('Failed to parse timestamp: {}'.format(pubDateString)))
-        pubDate = datetime.datetime(1970,1,1,tzinfo=tzutc())
+        print(colored.red('Failed to parse timestamp: {}'
+                          ''.format(pubDateString)))
+        pubDate = datetime.datetime(1970, 1, 1, tzinfo=tzutc())
     if pubDate.tzinfo is None:
-        print(colored.yellow('DEBUG: could not get timezone from {}'.format(pubDateString)))
+        print(colored.yellow('DEBUG: could not get timezone from {}'
+                             ''.format(pubDateString)))
         pubDate = pubDate.replace(tzinfo=tzutc())
     # Convert to UTC: this affects strftime but not the timestamp
     pubDate = datetime.datetime.fromtimestamp(pubDate.timestamp(), tz=tzutc())
     return pubDate
 
+
 # The BBC has stopped giving a time-of-day for podcasts in the RSS feed.
 def getTimestamp(url):
     "Retrieves timestamp for resource using HTTP headers."
-    headers = { 'User-Agent': userAgent }
+    headers = {'User-Agent': userAgent}
     r = requests.head(url, headers=headers, allow_redirects=True)
     if 'last-modified' in r.headers:
         pubDateString = r.headers['last-modified']
@@ -456,7 +537,8 @@ def getTimestamp(url):
     if 'location' in r.headers:
         return getTimestamp(r.headers['location'])
     print(colored.red('Timestamp lookup via HTTP failed'))
-    return datetime.datetime(1970,1,1,tzinfo=tzutc())
+    return datetime.datetime(1970, 1, 1, tzinfo=tzutc())
+
 
 def getPodcasts(idstring, url):
     "Checks podcast feed for episodes since start date and downloads them."
@@ -467,35 +549,45 @@ def getPodcasts(idstring, url):
 
     # Handle problems with URL
     try:
-        headers = {\
-        'User-Agent': userAgent,\
-        'If-Modified-Since': startDate.strftime('%a, %d %b %Y %H:%M:%S %Z'),\
-        }
+        headers = {
+            'User-Agent': userAgent,
+            'If-Modified-Since': startDate.strftime('%a, %d %b %Y %H:%M:%S %Z')}
         r = requests.get(url, headers=headers)
         if r.status_code == requests.codes.not_modified:
             print('No recent changes to {} feed.'.format(idstring))
             return True
         elif not r.status_code == requests.codes.ok:
-            print(colored.red('Could not open supplied URL for {}: error code {}.'.format(idstring, r.status_code)))
+            print(colored.red(
+                'Could not open supplied URL for {}: error code {}.'
+                ''.format(idstring, r.status_code)))
             return False
     except requests.exceptions.ConnectionError:
-        print(colored.red('Could not open supplied URL for {}: network problem'.format(idstring)))
+        print(colored.red(
+            'Could not open supplied URL for {}: network problem'
+            ''.format(idstring)))
         return False
     except requests.exceptions.HTTPError:
-        print(colored.red('Could not open supplied URL for {}: invalid HTTP response'.format(idstring)))
+        print(colored.red(
+            'Could not open supplied URL for {}: invalid HTTP response'
+            ''.format(idstring)))
         return False
     except requests.exceptions.TooManyRedirects:
-        print(colored.red('Could not open supplied URL for {}: too many redirects'.format(idstring)))
+        print(colored.red(
+            'Could not open supplied URL for {}: too many redirects'
+            ''.format(idstring)))
         return False
     except requests.exceptions.Timeout:
-        print(colored.red('Could not open supplied URL for {}: response took too long'.format(idstring)))
+        print(colored.red(
+            'Could not open supplied URL for {}: response took too long'
+            ''.format(idstring)))
         return False
 
     # Having got this far, it is worth checking the XML for new podcasts
     try:
         feedxml = minidom.parseString(r.content)
     except StandardError as e:
-        print(colored.red('Error parsing feed for {} ({}): skipping.'.format(idstring, e)))
+        print(colored.red(
+            'Error parsing feed for {} ({}): skipping.'.format(idstring, e)))
         return False
 
     # Switch for detecting if a download occurred
@@ -503,8 +595,8 @@ def getPodcasts(idstring, url):
 
     # This fixes feeds that have multiple processing instructions
     i = 0
-    while feedxml.childNodes[i].nodeType == Node.PROCESSING_INSTRUCTION_NODE or \
-    feedxml.childNodes[i].nodeType == Node.COMMENT_NODE:
+    while (feedxml.childNodes[i].nodeType == Node.PROCESSING_INSTRUCTION_NODE
+            or feedxml.childNodes[i].nodeType == Node.COMMENT_NODE):
         i += 1
 
     # Check what sort of feed it is
@@ -525,25 +617,34 @@ def getPodcasts(idstring, url):
                     enclosures = item.getElementsByTagName('enclosure')
                     if enclosures.length > 0:
                         url = enclosures[0].attributes['url'].value
-                        if len(url) == 0:
-                            print(colored.yellow('Skipping podcast from {}: enclosure empty.'.format(pubDate.strftime('%Y-%m-%d %H:%M'))))
+                        if not url:
+                            print(colored.yellow(
+                                'Skipping podcast from {}: enclosure empty.'
+                                ''.format(pubDate.strftime('%Y-%m-%d %H:%M'))))
                             continue
-                        # Fix pubDate if time is midnight (hence probably omitted)
+                        # Fix pubDate if time is midnight (hence probably
+                        # omitted)
                         if pubDate.hour + pubDate.minute == 0:
                             timestamp = getTimestamp(url)
-                            pubDate = datetime.datetime.combine(pubDate.date(), timestamp.time())
+                            pubDate = datetime.datetime.combine(
+                                pubDate.date(), timestamp.time())
                         path = urllib3.util.parse_url(url).path
-                        podcastName = pubDate.strftime(poddate) + idstring + os.path.splitext(path)[1]
+                        podcastName = (pubDate.strftime(poddate) + idstring +
+                                       os.path.splitext(path)[1])
                         podcastPath = os.path.join(podcastDir, podcastName)
                         if download(url, podcastPath):
-                            os.utime(podcastPath, times=(pubDate.timestamp(), pubDate.timestamp()))
+                            os.utime(podcastPath, times=(pubDate.timestamp(),
+                                                         pubDate.timestamp()))
                 else:
-                    # If podcasts are ordered latest-first, all subsequent tests will fail
-                    #+ as well. If a feed you like does it differently, remove this clause.
+                    # If podcasts are ordered latest-first, all subsequent
+                    # tests will fail as well. If a feed you like does it
+                    # differently, remove this clause.
                     break
         elif feedxml.firstChild.attributes['version'].value == '1.0':
-            # RSS 1: I will write support for this when I find a feed that uses it
-            print(colored.red('{} uses an RSS 1.0 feed, which isn\'t supported yet.'.format(idstring)))
+            # I will write support for RSS 1.0 when I find a feed that uses it
+            print(colored.red(
+                '{} uses an RSS 1.0 feed, which isn\'t supported yet.'
+                ''.format(idstring)))
             return False
     elif rootElement.tagName == 'feed':
         # Atom
@@ -558,39 +659,49 @@ def getPodcasts(idstring, url):
                     print('Found new {} podcast.'.format(idstring))
                     noPodcasts = False
                 links = item.getElementsByTagName('link')
-                enclosures = [link for link in links if link.hasAttribute('rel') \
-                    and link.attributes['rel'].value == 'enclosure']
+                enclosures = [link for link in links
+                              if link.hasAttribute('rel')
+                              and link.attributes['rel'].value == 'enclosure']
                 if enclosures.length > 0:
                     url = enclosures[0].attributes['href'].value
-                    if len(url) == 0:
-                        print(colored.yellow('Skipping podcast from {}: enclosure empty.'.format(pubDate.strftime('%Y-%m-%d %H:%M'))))
+                    if not url:
+                        print(colored.yellow(
+                            'Skipping podcast from {}: enclosure empty.'
+                            ''.format(pubDate.strftime('%Y-%m-%d %H:%M'))))
                         continue
                     # Fix pubDate if time is midnight (hence probably omitted)
                     if pubDate.hour + pubDate.minute == 0:
                         timestamp = getTimestamp(url)
-                        pubDate = datetime.datetime.combine(pubDate.date(), timestamp.time())
+                        pubDate = datetime.datetime.combine(
+                            pubDate.date(), timestamp.time())
                     path = urllib3.util.parse_url(url).path
-                    podcastName = pubDate.strftime(poddate) + idstring + os.path.splitext(path)[1]
+                    podcastName = pubDate.strftime(poddate) + idstring +\
+                        os.path.splitext(path)[1]
                     podcastPath = os.path.join(podcastDir, podcastName)
                     if download(url, podcastPath):
-                        os.utime(podcastPath, times=(pubDate.timestamp(), pubDate.timestamp()))
+                        os.utime(podcastPath, times=(pubDate.timestamp(),
+                                                     pubDate.timestamp()))
             else:
-                # If podcasts are ordered latest-first, all subsequent tests will fail
-                #+ as well. If a feed you like does it differently, remove this clause.
+                # If podcasts are ordered latest-first, all subsequent tests
+                # will fail as well. If a feed you like does it differently,
+                # remove this clause.
                 break
     else:
         print(colored.red('{} uses an unknown feed type.'.format(idstring)))
         return False
 
-    # Informative message if feed does not contain podcasts newer than startDate
     if noPodcasts:
+        # Feed does not contain podcasts newer than startDate
         print('No new {} podcasts.'.format(idstring))
 
+
 def fixGetIPlayerDate(s):
-    "Converts date format used in get_iplayer filenames to a format understood by Python."
+    '''Converts date format used in get_iplayer filenames to a format
+    understood by Python.
+    '''
 
     # Convert hh_MM_sshh_MM to hh:MM:ss±hhMM
-    s = s.replace('_',':')
+    s = s.replace('_', ':')
     s = re.sub(r'(:\d\d)Z', r'\1+0000', s)
     s = re.sub(r'(:\d\d)(\d\d):(\d\d)', r'\1+\2\3', s)
     s = re.sub(r'(:\d\d)-(\d\d):(\d\d)', r'\1-\2\3', s)
@@ -598,30 +709,37 @@ def fixGetIPlayerDate(s):
 
 
 def enqueueShows(tdir):
-    "Processes downloaded shows and moves them to podcast queue."
+    '''Processes downloaded shows and moves them to podcast queue.'''
+
     global podcastDir
 
     for entry in os.listdir(tdir):
         if entry.endswith('.m4a'):
             # Normalise volume
-            subprocess.call(aacgain + [ os.path.join(tdir, entry) ])
+            subprocess.call(aacgain + [os.path.join(tdir, entry)])
             # Extract date
             entryTuple = entry.partition('@')
             bcastDate = dateparser.parse(fixGetIPlayerDate(entryTuple[0]))
             # Convert to UTC: this affects strftime but not the timestamp
-            bcastDate = datetime.datetime.fromtimestamp(bcastDate.timestamp(), tz=tzutc())
+            bcastDate = datetime.datetime.fromtimestamp(
+                bcastDate.timestamp(), tz=tzutc())
             # Move to queue
             newFile = bcastDate.strftime(poddate) + entryTuple[2]
             newPath = os.path.join(podcastDir, newFile)
             print('Moving {} to {}'.format(entry, newPath))
             shutil.move(os.path.join(tdir, entry), newPath)
-            os.utime(newPath, times=(bcastDate.timestamp(), bcastDate.timestamp()))
+            os.utime(newPath, times=(bcastDate.timestamp(),
+                                     bcastDate.timestamp()))
 
-### DOWNLOADING
 
+# DOWNLOADING
+# ===========
+#
 # Refresh iPlayer cache (quietly) if about to do a block of recording;
 # for this we perform a very unlikely search
-if args.a or args.prog_name or args.episode or args.iplayer_ID or (args.p and len(config.options(shows)) > 0) or args.show_name:
+
+if (args.a or args.prog_name or args.episode or args.iplayer_ID or
+        (args.p and config.options(shows)) or args.show_name):
     print('Limbering up with an unlikely search...')
     exe = getiplayer + ['-q', 'zxcvbnm']
     subprocess.call(exe)
@@ -636,18 +754,20 @@ if args.p or args.podcast_ID or args.show_name:
             os.mkdirs(podcastDir)
         except OSError:
             print(colored.red('Cannot write to {}.'.format(podcastDir)))
-            print(colored.red('Please correct configuration before continuing.'))
+            print(colored.red(
+                'Please correct configuration before continuing.'))
             sys.exit(1)
 
     if args.p:
-        if len(config.options(podcasts)) > 0:
+        if config.options(podcasts):
             print('-------------------------------------------')
-            print('Looking for podcasts since {} UTC'.format(startDate.strftime('%Y-%m-%d %H:%M')))
+            print('Looking for podcasts since {} UTC'
+                  ''.format(startDate.strftime('%Y-%m-%d %H:%M')))
             print('-------------------------------------------')
             for idstring, url in config.items(podcasts):
                 getPodcasts(idstring, url)
                 print('')
-        if len(config.options(shows)) > 0:
+        if config.options(shows):
             print('-------------------------------------------')
             print('Looking for podcast material on iPlayer ')
             print('-------------------------------------------')
@@ -663,16 +783,23 @@ if args.p or args.podcast_ID or args.show_name:
     else:
         if args.podcast_ID:
             if args.podcast_ID in config.options(podcasts):
-                getPodcasts(args.podcast_ID, config.get(podcasts, args.podcast_ID))
+                getPodcasts(args.podcast_ID, config.get(
+                    podcasts, args.podcast_ID))
                 print('')
             else:
-                print(colored.red('Podcast {} not listed in config file.'.format(args.podcast_ID)))
-                print(colored.red('Please correct configuration and try again.'))
+                print(colored.red(
+                    'Podcast {} not listed in config file.'
+                    ''.format(args.podcast_ID)))
+                print(colored.red(
+                    'Please correct configuration and try again.'))
         if args.show_name:
-            if not args.show_name in config.options(shows):
-                print(colored.yellow('INFO: Show title {} not listed in config file.'.format(args.show_name)))
+            if args.show_name not in config.options(shows):
+                print(colored.yellow(
+                    'INFO: Show title {} not listed in config file.'
+                    ''.format(args.show_name)))
             with tempfile.TemporaryDirectory(prefix=progName) as tdir:
-                subprocess.call(getiplayerP + ['-o', tdir, '--search', args.show_name])
+                subprocess.call(getiplayerP + [
+                    '-o', tdir, '--search', args.show_name])
                 print('')
                 enqueueShows(tdir)
             print('')
@@ -686,11 +813,12 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID:
             os.mkdirs(audiobookDir)
         except OSError:
             print(colored.red('Cannot write to {}.'.format(audiobookDir)))
-            print(colored.red('Please correct configuration before continuing.'))
+            print(colored.red(
+                'Please correct configuration before continuing.'))
             sys.exit(1)
 
     if args.a:
-        if  len(config.options(programmes)) > 0:
+        if config.options(programmes):
             print('-------------------------------------------')
             print('Looking for iPlayer radio by programme name')
             print('-------------------------------------------')
@@ -701,34 +829,41 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID:
                 exe.extend(progGrp)
                 subprocess.call(exe)
                 print('')
-        if  len(config.options(episodes)) > 0:
+        if config.options(episodes):
             print('-------------------------------------------')
             print('Looking for iPlayer radio by episode name')
             print('-------------------------------------------')
             ls = config.options(episodes)
             for episodeGrp in [ls[i:i+5] for i in range(0, len(ls), 5)]:
                 print('  - {}?'.format('? '.join(episodeGrp)))
-                exe = getiplayerA + ['-o', audiobookDir, '--fields', 'name,episode', '--search']
+                exe = getiplayerA + [
+                    '-o', audiobookDir, '--fields', 'name,episode', '--search']
                 exe.extend(episodeGrp)
                 subprocess.call(exe)
                 print('')
-        if  len(config.options(pids)) > 0:
+        if config.options(pids):
             print('-------------------------------------------')
             print('Looking for iPlayer radio by PID')
             print('-------------------------------------------')
             for pid in config.options(pids):
                 print('  - {}?'.format(pid))
-                subprocess.call(getiplayerA + ['-o', audiobookDir, '--pid-recursive', '--pid', pid])
+                subprocess.call(getiplayerA + [
+                    '-o', audiobookDir, '--pid-recursive', '--pid', pid])
                 print('')
     else:
         if args.prog_name:
-            subprocess.call(getiplayerA + ['-o', audiobookDir, '--search', args.prog_name])
+            subprocess.call(getiplayerA + [
+                '-o', audiobookDir, '--search', args.prog_name])
             print('')
         if args.episode:
-            subprocess.call(getiplayerA + ['-o', audiobookDir, '--fields', 'name,episode', '--search', args.episode])
+            subprocess.call(getiplayerA + [
+                '-o', audiobookDir, '--fields', 'name,episode', '--search',
+                args.episode])
             print('')
         if args.iplayer_ID:
-            subprocess.call(getiplayerA + ['-o', audiobookDir, '--pid-recursive', '--pid', args.iplayer_ID])
+            subprocess.call(getiplayerA + [
+                '-o', audiobookDir, '--pid-recursive', '--pid',
+                args.iplayer_ID])
             print('')
 
     # Remove timestamps from filenames and apply directly to files
@@ -737,35 +872,41 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID:
             if entry.endswith('.m4a') and entry.count('@') > 0:
                 try:
                     entryTuple = entry.partition('@')
-                    bcastDate = dateparser.parse(fixGetIPlayerDate(entryTuple[0]))
-                    shutil.move(os.path.join(root, entry), os.path.join(root, entryTuple[2]))
-                    os.utime(os.path.join(root, entryTuple[2]), times=(bcastDate.timestamp(), bcastDate.timestamp()))
+                    bcastDate = dateparser.parse(fixGetIPlayerDate(
+                        entryTuple[0]))
+                    shutil.move(os.path.join(root, entry), os.path.join(
+                        root, entryTuple[2]))
+                    os.utime(os.path.join(root, entryTuple[2]), times=(
+                        bcastDate.timestamp(), bcastDate.timestamp()))
                 except ValueError:
                     continue
 
-### STAGING AUDIOBOOKS
-
+# STAGING AUDIOBOOKS
+# ==================
+#
 # Detect unstaged audiobook directories
 unstaged = []
 dated = re.compile(r'\d{8}-')
 if os.path.isdir(audiobookDir):
     for entry in os.listdir(audiobookDir):
-        if os.path.isdir(os.path.join(audiobookDir, entry)) and dated.match(entry) is None:
+        if (os.path.isdir(os.path.join(audiobookDir, entry))
+                and dated.match(entry) is None):
             unstaged.append(entry)
 
 # Process options
-if not limits in config:
+if limits not in config:
     config.add_section(limits)
     isNewConfig = True
 if args.mk_lims:
     unlimited = 0
     csnum = re.compile(r'[,\s\d]+')
     for entry in unstaged:
-        if not entry in config.options(limits):
+        if entry not in config.options(limits):
             unlimited += 1
             if unlimited == 1:
-                print('Please give the number of episodes each folder should contain before being staged.')
-                print('You can give a comma-separated list to stage a folder in chunks.')
+                print('Please give the number of episodes each folder should'
+                      ' contain before being staged. You can give a comma'
+                      '-separated list to stage a folder in chunks.')
             lim = input('Staging limit(s) for {}? '.format(entry))
             while csnum.fullmatch(lim) is None:
                 print("That's not right. Enter something like 6 or 4,4,3.")
@@ -773,15 +914,18 @@ if args.mk_lims:
             config.set(limits, entry, lim)
             isNewConfig = True
     if unlimited == 0:
-        print('There are no unstaged folders without limits set.')
-        print('You can edit existing limits with the --reset-limits option.')
+        print('There are no unstaged folders without limits set.'
+              ' You can edit existing limits with the --reset-limits option.')
 if args.mv_lims:
-    if len(config.options(limits)) > 0:
-        print('Please give the number of episodes each folder should contain before being staged.')
-        print('You can give a comma-separated list to stage a folder in chunks, or leave blank to keep the current setting.')
+    if config.options(limits):
+        print('Please give the number of episodes each folder should contain'
+              ' before being staged. You can give a comma-separated list to'
+              ' stage a folder in chunks, or leave blank to keep the current'
+              ' setting.')
         csnum = re.compile(r'[,\s\d]+')
         for entry in config.options(limits):
-            lim = input('Staging limit(s) for {}? (Current value: {}) '.format(entry, config.get(limits, entry)))
+            lim = input('Staging limit(s) for {}? (Current value: {}) '
+                        ''.format(entry, config.get(limits, entry)))
             if csnum.fullmatch(lim) is None:
                 print('Leaving unchanged.')
             else:
@@ -792,7 +936,8 @@ if args.mv_lims:
         print('No limits currently set.')
 
 # Stage any folders that have reached their limit
-if args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims or args.mv_lims or args.rm_lims:
+if (args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims
+        or args.mv_lims or args.rm_lims):
     for entry in unstaged:
         if entry in config.options(limits):
             lims = config.get(limits, entry).split(',')
@@ -800,15 +945,19 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims o
             earliestDate = now
             numOfEps = 0
             for ep in os.listdir(os.path.join(audiobookDir, entry)):
-                if os.path.isfile(os.path.join(audiobookDir, entry, ep)) and ep.endswith('.m4a'):
-                    timestamp = os.path.getmtime(os.path.join(audiobookDir, entry, ep))
-                    foundDate = datetime.datetime.fromtimestamp(timestamp, tz=tzutc())
+                if (os.path.isfile(os.path.join(audiobookDir, entry, ep))
+                        and ep.endswith('.m4a')):
+                    timestamp = os.path.getmtime(
+                        os.path.join(audiobookDir, entry, ep))
+                    foundDate = datetime.datetime.fromtimestamp(
+                        timestamp, tz=tzutc())
                     if earliestDate > foundDate:
                         earliestDate = foundDate
                     numOfEps += 1
             if numOfEps >= int(lims[0]):
                 newEntry = earliestDate.strftime('%Y%m%d-') + entry
-                os.rename(os.path.join(audiobookDir, entry), os.path.join(audiobookDir, newEntry))
+                os.rename(os.path.join(audiobookDir, entry),
+                          os.path.join(audiobookDir, newEntry))
                 if len(lims) > 1:
                     os.makedirs(os.path.join(audiobookDir, entry))
                     lims.pop()[0]
@@ -821,12 +970,13 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims o
 # Remove any (stray) completed limits
 if args.rm_lims:
     for entry in config.options(limits):
-        if not entry in unstaged:
+        if entry not in unstaged:
             config.remove_option(limits, entry)
             print('Limit for {} removed.'.format(entry))
             isNewConfig = True
 
-### FINISHING UP
+# FINISHING UP
+# ============
 
 # Write config file if changed
 if isNewConfig:
@@ -834,7 +984,9 @@ if isNewConfig:
         with open(config_file, 'w') as f:
             config.write(f)
     except IOError:
-        print(colored.red('Cannot write config file; please move script to a writeable directory.'))
+        print(colored.red(
+            'Cannot write config file; please move script to a writeable'
+            ' directory.'))
         sys.exit(1)
 
 # That's all
