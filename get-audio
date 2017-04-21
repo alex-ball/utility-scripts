@@ -964,7 +964,7 @@ if (args.a or args.prog_name or args.episode or args.iplayer_ID or args.mk_lims
                           os.path.join(audiobookDir, newEntry))
                 if len(lims) > 1:
                     os.makedirs(os.path.join(audiobookDir, entry))
-                    lims.pop()[0]
+                    lims.pop(0)
                     limstring = ','.join(lims)
                     config.set(limits, entry, limstring)
                 else:
