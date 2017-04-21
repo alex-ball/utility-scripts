@@ -62,7 +62,11 @@ audiobookFallbackDir = os.path.expanduser('~/Audio/Audiobooks-Staging/')
 
 # Time utilities
 
+# For some reason, dateparser seems to think that GMT changes to BST when DST
+# comes into effect, which it absolutely doesn't. We force the correct
+# interpretation here.
 TZOFFSETS = {
+    "GMT": 0000,
     "EET": 7200}
 
 now = datetime.datetime.now(tzlocal())
@@ -513,11 +517,11 @@ def parsePubDate(pubDateString):
         pubDate = dateparser.parse(pubDateString, tzinfos=TZOFFSETS)
     except ValueError:
         print(colored.red('Failed to parse timestamp: {}'
-                          ''.format(pubDateString)))
+                          .format(pubDateString)))
         pubDate = datetime.datetime(1970, 1, 1, tzinfo=tzutc())
     if pubDate.tzinfo is None:
         print(colored.yellow('DEBUG: could not get timezone from {}'
-                             ''.format(pubDateString)))
+                             .format(pubDateString)))
         pubDate = pubDate.replace(tzinfo=tzutc())
     # Convert to UTC: this affects strftime but not the timestamp
     pubDate = datetime.datetime.fromtimestamp(pubDate.timestamp(), tz=tzutc())
