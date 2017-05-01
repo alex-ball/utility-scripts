@@ -30,12 +30,12 @@ from blist import sorteddict
 
 getiplayer = [
     'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--nopurge',
-    '--nocopyright', '--type', 'radio', '--radiomode', 'better']
+    '--nocopyright', '--type', 'radio', '--radiomode', 'better', '--future']
 getiplayerG = getiplayer + ['--attempts', '3', '-g']
-getiplayerP = getiplayerG + ['--file-prefix', '<lastbcast>@<nameshort>']
+getiplayerP = getiplayerG + ['--file-prefix', '<available>@<nameshort>']
 getiplayerA = getiplayerG + [
     '-s', '--subdir-format', '<name>', '--file-prefix',
-    '<lastbcast>@<senum>-<episodeshort>']
+    '<available>@<senum>-<episodeshort>']
 aacgain = ['aacgain', '-p', '-q', '-k', '-r', '-e']
 mp3gain = ['aacgain', '-p', '-q', '-k', '-r', '-e']
 vorbisgain = ['vorbisgain', '-p', '-q', '-f']
