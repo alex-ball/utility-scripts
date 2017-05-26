@@ -755,7 +755,7 @@ if args.p or args.podcast_ID or args.show_name:
     # Make sure podcast queue exists
     if not os.path.isdir(podcastDir):
         try:
-            os.mkdirs(podcastDir)
+            os.makedirs(podcastDir)
         except OSError:
             print(colored.red('Cannot write to {}.'.format(podcastDir)))
             print(colored.red(
@@ -814,7 +814,7 @@ if args.a or args.prog_name or args.episode or args.iplayer_ID:
     # Make sure audiobooks queue exists
     if not os.path.isdir(audiobookDir):
         try:
-            os.mkdirs(audiobookDir)
+            os.makedirs(audiobookDir)
         except OSError:
             print(colored.red('Cannot write to {}.'.format(audiobookDir)))
             print(colored.red(
