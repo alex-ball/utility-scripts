@@ -528,20 +528,21 @@ def parsePubDate(pubDateString):
     return pubDate
 
 
-# The BBC has stopped giving a time-of-day for podcasts in the RSS feed.
-def getTimestamp(url):
-    "Retrieves timestamp for resource using HTTP headers."
-    headers = {'User-Agent': userAgent}
-    r = requests.head(url, headers=headers, allow_redirects=True)
-    if 'last-modified' in r.headers:
-        pubDateString = r.headers['last-modified']
-        return parsePubDate(pubDateString)
-    # If header not there, follow redirects to file
-    r = requests.get(url, allow_redirects=False)
-    if 'location' in r.headers:
-        return getTimestamp(r.headers['location'])
-    print(colored.red('Timestamp lookup via HTTP failed'))
-    return datetime.datetime(1970, 1, 1, tzinfo=tzutc())
+def getFakeDate(item, enclosure):
+    "Generates fake date object from numeric property of item in podcast feed."
+    # Fallback value
+    fakeDate = datetime.datetime(1970, 1, 1, tzinfo=tzutc())
+    # We look for a duration (in seconds)
+    durations = item.getElementsByTagName('itunes:duration')
+    if durations.length > 0:
+        duration = int(durations[0].firstChild.data)
+        # We scale this value so that a one hour podcast comes out at midday
+        fakeDate = datetime.datetime.fromtimestamp(duration * 12, tz=tzutc())
+    elif 'length' in enclosure.attributes:
+        # Otherwise we generate it from the number of bytes
+        length = int(enclosure.attributes['length'].value)
+        fakeDate = datetime.datetime.fromtimestamp(length, tz=tzutc())
+    return fakeDate
 
 
 def getPodcasts(idstring, url):
@@ -629,9 +630,9 @@ def getPodcasts(idstring, url):
                         # Fix pubDate if time is midnight (hence probably
                         # omitted)
                         if pubDate.hour + pubDate.minute == 0:
-                            timestamp = getTimestamp(url)
+                            fakeDate = getFakeDate(item, enclosures[0])
                             pubDate = datetime.datetime.combine(
-                                pubDate.date(), timestamp.timetz())
+                                pubDate.date(), fakeDate.timetz())
                         path = urllib3.util.parse_url(url).path
                         podcastName = (pubDate.strftime(poddate) + idstring +
                                        os.path.splitext(path)[1])
@@ -675,9 +676,9 @@ def getPodcasts(idstring, url):
                         continue
                     # Fix pubDate if time is midnight (hence probably omitted)
                     if pubDate.hour + pubDate.minute == 0:
-                        timestamp = getTimestamp(url)
+                        fakeDate = fakeDate = getFakeDate(item, enclosures[0])
                         pubDate = datetime.datetime.combine(
-                            pubDate.date(), timestamp.timetz())
+                            pubDate.date(), fakeDate.timetz())
                     path = urllib3.util.parse_url(url).path
                     podcastName = pubDate.strftime(poddate) + idstring +\
                         os.path.splitext(path)[1]
