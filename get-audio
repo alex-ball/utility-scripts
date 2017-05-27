@@ -30,7 +30,8 @@ from blist import sorteddict
 
 getiplayer = [
     'get_iplayer', '--refresh-exclude-groups-radio', 'local', '--nopurge',
-    '--nocopyright', '--type', 'radio', '--radiomode', 'better', '--future']
+    '--nocopyright', '--type', 'radio', '--radiomode', 'better',
+    '--exclude-channel', 'Shropshire']
 getiplayerG = getiplayer + ['--attempts', '3', '-g']
 getiplayerP = getiplayerG + ['--file-prefix', '<available>@<nameshort>']
 getiplayerA = getiplayerG + [
