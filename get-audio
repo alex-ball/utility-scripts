@@ -536,10 +536,12 @@ def getFakeDate(item, enclosure):
     durations = item.getElementsByTagName('itunes:duration')
     if durations.length > 0:
         duration = int(durations[0].firstChild.data)
-        # We scale this value so that a one hour podcast comes out at midday
-        fakeDate = datetime.datetime.fromtimestamp(duration * 12, tz=tzutc())
+        # We scale this value so that a half hour podcast comes out at midday
+        # and an hour long podcast comes out at 18:00.
+        fakeDate = datetime.datetime.fromtimestamp(
+            21600 + (duration * 12), tz=tzutc())
     elif 'length' in enclosure.attributes:
-        # Otherwise we generate it from the number of bytes
+        # Otherwise we generate it from the number of bytes.
         length = int(enclosure.attributes['length'].value)
         fakeDate = datetime.datetime.fromtimestamp(length, tz=tzutc())
     return fakeDate
