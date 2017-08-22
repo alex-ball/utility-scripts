@@ -388,6 +388,8 @@ else:
             if os.path.isfile(os.path.join(podcastDir, entry)):
                 if entry.startswith('.'):
                     continue
+                if not re.search(r'\.(mp3|m4a|ogg|opus)$', entry):
+                    continue
                 timestamp = os.path.getmtime(os.path.join(podcastDir, entry))
                 foundDate = datetime.datetime.fromtimestamp(
                     timestamp, tz=tzutc())
