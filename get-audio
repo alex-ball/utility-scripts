@@ -535,15 +535,31 @@ def getFakeDate(item, enclosure):
     "Generates fake date object from numeric property of item in podcast feed."
     # Fallback value
     fakeDate = datetime.datetime(1970, 1, 1, tzinfo=tzutc())
-    # We look for a duration (in seconds)
+    # We look for a duration (in seconds), falling back to zero
+    duration = 0
     durations = item.getElementsByTagName('itunes:duration')
     if durations.length > 0:
-        duration = int(durations[0].firstChild.data)
+        raw_duration = durations[0].firstChild.data
+        colons = raw_duration.count(':')
+        if colons == 2:
+            hms = re.match(r"(\d+):(\d+):(\d+)", raw_duration)
+            if hms:
+                duration = (int(hms.group(3)) + (int(hms.group(2)) * 60) +
+                            (int(hms.group(1)) * 3600))
+        elif colons == 1:
+            ms = re.match(r"(\d+):(\d+)", raw_duration)
+            if ms:
+                duration = (int(hms.group(2)) + (int(hms.group(1)) * 60))
+        else:
+            try:
+                duration = int(raw_duration)
+            except ValueError:
+                duration = 0
         # We scale this value so that a half hour podcast comes out at midday
         # and an hour long podcast comes out at 18:00.
         fakeDate = datetime.datetime.fromtimestamp(
             21600 + (duration * 12), tz=tzutc())
-    elif 'length' in enclosure.attributes:
+    if duration == 0 and 'length' in enclosure.attributes:
         # Otherwise we generate it from the number of bytes.
         length = int(enclosure.attributes['length'].value)
         fakeDate = datetime.datetime.fromtimestamp(length, tz=tzutc())
