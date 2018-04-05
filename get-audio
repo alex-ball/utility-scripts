@@ -15,6 +15,7 @@ import argparse
 import subprocess
 import sys
 from xml.dom import minidom, Node
+from xml.parsers.expat import ExpatError
 
 # Non-standard libraries: python3-dateutil, python3-requests, python3-clint,
 # python3-blist
@@ -611,7 +612,7 @@ def getPodcasts(idstring, url):
     # Having got this far, it is worth checking the XML for new podcasts
     try:
         feedxml = minidom.parseString(r.content)
-    except StandardError as e:
+    except ExpatError as e:
         print(colored.red(
             'Error parsing feed for {} ({}): skipping.'.format(idstring, e)))
         return False
