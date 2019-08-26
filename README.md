@@ -41,7 +41,7 @@ A collection of command-line scripts that make my life easier:
     the individual audiobook folders so you have to do that manually when you
     think the folder is full enough.
 
-    As the standard Python libraries, this script also relies on
+    As well as the standard Python libraries, this script also relies on
 
       * the non-standard libraries [`requests`](http://docs.python-requests.org/),
         [`dateutil`](https://dateutil.readthedocs.org/),
