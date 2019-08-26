@@ -37,12 +37,11 @@ A collection of command-line scripts that make my life easier:
     levels. As well as downloading podcasts, it can also download BBC radio
     programmes and add them to the queue. For programmes that are best listened
     to in a block rather than strict chronological order, the script supports
-    an 'audiobook' queue; unfortunately it is not yet clever enough to date the
+    an 'audiobook' queue; unfortunately it is not clever enough to date the
     the individual audiobook folders so you have to do that manually when you
     think the folder is full enough.
 
-    The script has become quite complicated, so as well as the standard Python
-    libraries it also relies on
+    As the standard Python libraries, this script also relies on
 
       * the non-standard libraries [`requests`](http://docs.python-requests.org/),
         [`dateutil`](https://dateutil.readthedocs.org/),
@@ -52,6 +51,11 @@ A collection of command-line scripts that make my life easier:
         [`aacgain`](http://aacgain.altosdesign.com/) and
         [`vorbisgain`](https://sjeng.org/vorbisgain.html);
       * [`get_iplayer`](http://www.infradead.org/get_iplayer/html/get_iplayer.html).
+
+    This represents my second attempt at this sort of thing. I have since moved
+    on to a third attempt, called [Enqueue].
+
+    [Enqueue]: https://gitlab.com/alex-ball/enqueue
 
   * **fix-atom-spellcheck:** Add system spellcheck dictionaries to Atom editor
 
