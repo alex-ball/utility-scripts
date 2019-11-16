@@ -54,3 +54,4 @@ docs/_build/
 target/
 /get-audio.ini
 *.kdev4
+get-audio-v3-plan.md

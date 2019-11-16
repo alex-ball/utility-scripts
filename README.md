@@ -60,7 +60,8 @@ A collection of command-line scripts that make my life easier:
   * **fix-atom-spellcheck:** Add system spellcheck dictionaries to Atom editor
 
     The [Atom editor](https://atom.io/) spell checker responds to the system
-    language, but on Linux systems only looks at the dictionaries that it ships
-    with, i.e. American English. This script adds the system's dictionaries to
-    Atom's dictionary folder. It was worth scripting since this must be redone
-    every time the software gets updated.
+    language, but in the early days on Linux systems it only looked at the
+    dictionaries that it shipped with, i.e. American English. This script adds
+    the system's dictionaries to Atom's dictionary folder, which worked around
+    that problem. It was worth scripting since this had to be redone every time
+    the software was updated. Thankfully the issue has since been fixed.
