@@ -65,3 +65,16 @@ A collection of command-line scripts that make my life easier:
     the system's dictionaries to Atom's dictionary folder, which worked around
     that problem. It was worth scripting since this had to be redone every time
     the software was updated. Thankfully the issue has since been fixed.
+
+  * **midi2mp3.py:** Concatenate and convert MIDI files to MP3
+
+    Python 3 tool for easily converting one or more MIDI files to a single MP3,
+    optionally inserting time gaps between them or at the end (to ensure reverb
+    has time to finish).
+
+    As well as the standard Python libraries, this script also relies on
+
+    * the non-standard library [`mido`](https://pypi.org/project/mido/);
+    * [`fluidsynth`](http://www.fluidsynth.org) and a
+      [soundfont](https://github.com/FluidSynth/fluidsynth/wiki/SoundFont);
+    * [`lame`](https://lame.sourceforge.io/).
