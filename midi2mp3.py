@@ -187,8 +187,7 @@ def main():
         '-p', '--parallel',
         help="generate audio and encode to MP3 in parallel instead of"
              " sequentially",
-        action='store_true',
-        default='/usr/share/sounds/sf2/FluidR3_GM.sf2')
+        action='store_true')
     parser.add_argument(
         '-s', '--soundfont',
         help="path to soundfont to use",
