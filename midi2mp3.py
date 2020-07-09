@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 from tempfile import NamedTemporaryFile
+import shutil
 import subprocess
 from time import strftime
 import mido
@@ -111,6 +112,12 @@ def do_sequential_conversion(args):
             print("Failed to generate intermediate MIDI file.")
             sys.exit(1)
 
+        try:
+            if args.midi:
+                shutil.copy2(f.name, args.midi)
+        except Exception as e:
+            print(f"Could not save intermediate MIDI file: {e}")
+
         print("Converting MIDI to raw audio...")
         try:
             wav = subprocess.run(
@@ -139,6 +146,12 @@ def do_streamed_conversion(args):
         if not os.path.isfile(f.name):
             print("Failed to generate intermediate MIDI file.")
             sys.exit(1)
+
+        try:
+            if args.midi:
+                shutil.copy2(f.name, args.midi)
+        except Exception as e:
+            print(f"Could not save intermediate MIDI file: {e}")
 
         print("Converting MIDI to MP3...")
         wav = subprocess.Popen(
@@ -178,6 +191,10 @@ def main():
         help="seconds of silence to append",
         type=float,
         default=1.0)
+    parser.add_argument(
+        '-m', '--midi',
+        help="path/filename to which to save concatenated MIDI file",
+        type=str)
     parser.add_argument(
         '-o', '--out',
         help="output filename, if it should differ from first input apart from"
