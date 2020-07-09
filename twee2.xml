@@ -121,6 +121,7 @@
         <RegExpr attribute="Macro" context="HLMacro" String="\(([-\w]+):" lookAhead="true"/>
         <RegExpr attribute="Link" context="HLLink" String="\[\[([^\[]+)-&gt;[^\]&gt;]+\]\]" lookAhead="true"/>
         <RegExpr attribute="Link" context="HLLink" String="\[\[[^\[&lt;]+&lt;-([^\]]+)\]\]" lookAhead="true"/>
+        <RegExpr attribute="Link" context="HLLink" String="\[\[([^\[&lt;&gt;\]]+)\]\]" lookAhead="true"/>
         <RegExpr attribute="Label" context="#stay" String="\|([-\w]+)[&gt;)]"/>
         <RegExpr attribute="Label" context="#stay" String="[&lt;(]([-\w]+)\|"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
@@ -180,6 +181,7 @@
       </context>
       <context name="HLLink" attribute="Link" lineEndContext="#stay">
         <RegExpr attribute="Link Text" context="#stay" String="%1" dynamic="true"/>
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <Detect2Chars attribute="Link" context="#pop" char="]" char1="]"/>
       </context>
     </contexts>
