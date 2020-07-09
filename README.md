@@ -78,3 +78,8 @@ A collection of command-line scripts that make my life easier:
     * [`fluidsynth`](http://www.fluidsynth.org) and a
       [soundfont](https://github.com/FluidSynth/fluidsynth/wiki/SoundFont);
     * [`lame`](https://lame.sourceforge.io/).
+
+  * **twee2.xml:** Kate Syntax Highlighting file for Twee2/Harlowe.
+
+    See the [KatePart](https://docs.kde.org/stable5/en/applications/katepart/highlight.html)
+    documentation for how to install this for use with the Kate editor.

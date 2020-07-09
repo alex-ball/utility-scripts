@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language
+    name="Twee 2"
+    section="Sources"
+    extensions="*.tw2;*.tw"
+    mimetype=""
+    version="1"
+    kateversion="5.0"
+    priority="0"
+    author="Alex Ball (ab318@bath.ac.uk)"
+    indenter="normal">
+  <highlighting>
+    <list name="keywords">
+      <item>exit</item>
+      <item>exits</item>
+      <item>false</item>
+      <item>it</item>
+      <item>time</item>
+      <item>true</item>
+      <item>visit</item>
+      <item>visits</item>
+      <item>red</item>
+      <item>orange</item>
+      <item>yellow</item>
+      <item>lime</item>
+      <item>green</item>
+      <item>aqua</item>
+      <item>cyan</item>
+      <item>blue</item>
+      <item>navy</item>
+      <item>purple</item>
+      <item>magenta</item>
+      <item>fuchsia</item>
+      <item>white</item>
+      <item>black</item>
+      <item>gray</item>
+      <item>grey</item>
+    </list>
+    <list name="operators">
+      <item>is</item>
+      <item>is not</item>
+      <item>contains</item>
+      <item>is in</item>
+      <item>+</item>
+      <item>-</item>
+      <item>*</item>
+      <item>/</item>
+      <item>%</item>
+      <item>...</item>
+      <item>'s</item>
+      <item>of</item>
+      <item>matches</item>
+      <item>is a</item>
+      <item>is an</item>
+      <item>bind</item>
+      <item>&gt;</item>
+      <item>&gt;=</item>
+      <item>&lt;</item>
+      <item>&lt;=</item>
+      <item>and</item>
+      <item>or</item>
+      <item>not</item>
+      <item>to</item>
+    </list>
+    <list name="datanames">
+      <item>last</item>
+      <item>length</item>
+      <item>any</item>
+      <item>all</item>
+    </list>
+    <list name="lambdas">
+      <item>where</item>
+      <item>via</item>
+      <item>making</item>
+      <item>when</item>
+      <item>each</item>
+    </list>
+    <contexts>
+      <context name="Base" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Passage Start" context="PassageHeader" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
+        <IncludeRules context="Harlowe"/>
+      </context>
+      <context name="PassageHeader" attribute="Passage Name" lineEndContext="#pop">
+        <DetectChar attribute="Tags" context="PassageTags" char="["/>
+        <RangeDetect attribute="Coordinates" context="#stay" char="&lt;"  char1="&gt;"/>
+        <DetectChar attribute="Normal Text" context="InlineJSON" char="{"/>
+      </context>
+      <context name="PassageHeaderCSS" attribute="Passage Name" lineEndContext="#pop!CSS">
+        <RangeDetect attribute="Coordinates" context="#stay" char="&lt;"  char1="&gt;"/>
+        <DetectChar attribute="Normal Text" context="InlineJSON" char="{"/>
+      </context>
+      <context name="PassageHeaderHAML" attribute="Passage Name" lineEndContext="#pop!HAML">
+        <RangeDetect attribute="Coordinates" context="#stay" char="&lt;"  char1="&gt;"/>
+        <DetectChar attribute="Normal Text" context="InlineJSON" char="{"/>
+      </context>
+      <context name="PassageTags" attribute="Tags" lineEndContext="#stay">
+        <WordDetect attribute="Tags" context="PassageTagsCSS" String="stylesheet" insensitive="true"/>
+        <WordDetect attribute="Tags" context="PassageTagsHAML" String="haml" insensitive="true"/>
+        <DetectChar attribute="Tags" context="#pop" char="]"/>
+      </context>
+      <context name="PassageTagsCSS" attribute="Tags" lineEndContext="#stay">
+        <DetectChar attribute="Tags" context="#pop#pop!PassageHeaderCSS" char="]"/>
+      </context>
+      <context name="PassageTagsHAML" attribute="Tags" lineEndContext="#stay">
+        <DetectChar attribute="Tags" context="#pop#pop!PassageHeaderHAML" char="]"/>
+      </context>
+      <context name="InlineJSON" attribute="Normal Text" lineEndContext="#pop">
+        <DetectChar attribute="Normal Text" context="#pop" char="}"/>
+        <IncludeRules context="Pair##JSON" includeAttrib="true"/>
+      </context>
+      <context name="CSS" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Passage Start" context="#pop" char=":" char1=":" column="0" lookAhead="true" />
+        <IncludeRules context="Base##CSS" includeAttrib="true"/>
+      </context>
+      <context name="HAML" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Passage Start" context="#pop" char=":" char1=":" column="0" lookAhead="true" />
+        <!-- <IncludeRules context="normal##Haml" includeAttrib="true"/> -->
+        <IncludeRules context="Harlowe"/>
+      </context>
+      <context name="Harlowe" attribute="Normal Text" lineEndContext="#stay">
+        <RegExpr attribute="Macro" context="HLMacro" String="\(([-\w]+):" lookAhead="true"/>
+        <RegExpr attribute="Link" context="HLLink" String="\[\[([^\[]+)-&gt;[^\]&gt;]+\]\]" lookAhead="true"/>
+        <RegExpr attribute="Link" context="HLLink" String="\[\[[^\[&lt;]+&lt;-([^\]]+)\]\]" lookAhead="true"/>
+        <RegExpr attribute="Label" context="#stay" String="\|([-\w]+)[&gt;)]"/>
+        <RegExpr attribute="Label" context="#stay" String="[&lt;(]([-\w]+)\|"/>
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+      </context>
+      <context name="HLMacro" attribute="Macro" lineEndContext="#stay">
+        <DetectChar attribute="Macro" context="#pop!HLParameter" char=":"/>
+      </context>
+      <context name="HLParameter" attribute="Normal Text" lineEndContext="#stay">
+        <RegExpr attribute="Macro" context="HLMacro" String="\(([-\w]+):" lookAhead="true"/>
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <RegExpr attribute="Hook" context="#stay" String="\?\w+\b"/>
+        <RegExpr attribute="Dataname" context="#stay" String="\d+(st|nd|rd|th)(last)?(to(\d+(st|nd|rd|th)(last)?|last))?"/>
+        <keyword attribute="Keyword" context="#stay" String="keywords"/>
+        <keyword attribute="Operator" context="#stay" String="operators"/>
+        <keyword attribute="Dataname" context="#stay" String="datanames"/>
+        <keyword attribute="Lambda" context="#stay" String="lambdas"/>
+        <Int attribute="Number" context="#stay"/>
+        <Float attribute="Number" context="#stay"/>
+        <DetectChar attribute="String" context="HLDString" char="&quot;"/>
+        <RegExpr attribute="String" context="HLSString" String="(?&lt;![\w)])'"/>
+        <DetectChar attribute="Macro" context="HLParameter" char="("/>
+        <DetectChar attribute="Macro" context="#pop" char=")"/>
+      </context>
+      <context name="HLSString" attribute="String" lineEndContext="#stay">
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <RegExpr attribute="Macro in String" context="HLSStringMacro" String="\(([-\w]+):" lookAhead="true"/>
+        <DetectChar attribute="String" context="#pop" char="'"/>
+      </context>
+      <context name="HLDString" attribute="String" lineEndContext="#stay">
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <RegExpr attribute="Macro in String" context="HLDStringMacro" String="\(([-\w]+):" lookAhead="true"/>
+        <DetectChar attribute="String" context="#pop" char="&quot;"/>
+      </context>
+      <context name="HLSStringMacro" attribute="Macro in String" lineEndContext="#stay">
+        <DetectChar attribute="Macro in String" context="#pop!HLSStringParameter" char=":"/>
+      </context>
+      <context name="HLDStringMacro" attribute="Macro in String" lineEndContext="#stay">
+        <DetectChar attribute="Macro in String" context="#pop!HLDStringParameter" char=":"/>
+      </context>
+      <context name="HLSStringParameter" attribute="Macro in String" lineEndContext="#stay">
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <DetectChar attribute="Macro in String" context="HLSStringParameter" char="("/>
+        <DetectChar attribute="Macro in String" context="#pop" char=")"/>
+        <DetectChar attribute="String" context="#pop" char="'" lookAhead="true"/>
+      </context>
+      <context name="HLDStringParameter" attribute="Macro in String" lineEndContext="#stay">
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <DetectChar attribute="Macro in String" context="HLDStringParameter" char="("/>
+        <DetectChar attribute="Macro in String" context="#pop" char=")"/>
+        <DetectChar attribute="String" context="#pop" char="&quot;" lookAhead="true"/>
+      </context>
+      <context name="HLLink" attribute="Link" lineEndContext="#stay">
+        <RegExpr attribute="Link Text" context="#stay" String="%1" dynamic="true"/>
+        <Detect2Chars attribute="Link" context="#pop" char="]" char1="]"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text" defStyleNum="dsNormal"/>
+      <itemData name="Passage Start" defStyleNum="dsAnnotation"/>
+      <itemData name="Passage Name" defStyleNum="dsBuiltIn"/>
+      <itemData name="Tags" defStyleNum="dsPreprocessor"/>
+      <itemData name="Coordinates" defStyleNum="dsSpecialString"/>
+      <itemData name="Macro" defStyleNum="dsFunction" bold="true"/>
+      <itemData name="Label" defStyleNum="dsExtension" bold="true"/>
+      <itemData name="Hook" defStyleNum="dsExtension" bold="false"/>
+      <itemData name="Variable" defStyleNum="dsVariable"/>
+      <itemData name="Temp Variable" defStyleNum="dsVariable"/>
+      <itemData name="String" defStyleNum="dsString" />
+      <itemData name="Macro in String" defStyleNum="dsSpecialString"/>
+      <itemData name="Number" defStyleNum="dsFloat" />
+      <itemData name="Link Text" defStyleNum="dsOthers" underline="true"/>
+      <itemData name="Link" defStyleNum="dsOthers"/>
+      <itemData name="Keyword" defStyleNum="dsInformation" bold="false"/>
+      <itemData name="Operator" defStyleNum="dsOthers"/>
+      <itemData name="Dataname" defStyleNum="dsChar"/>
+      <itemData name="Lambda" defStyleNum="dsOthers" italic="true"/>
+    </itemDatas>
+  </highlighting>
+</language>
