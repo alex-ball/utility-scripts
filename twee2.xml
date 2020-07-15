@@ -126,6 +126,7 @@
         <RegExpr attribute="Label" context="#stay" String="[&lt;(]([-\w]+)\|"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <RegExpr attribute="Verbatim String" context="HLVString" String="(`+)"/>
       </context>
       <context name="HLMacro" attribute="Macro" lineEndContext="#stay">
         <DetectChar attribute="Macro" context="#pop!HLParameter" char=":"/>
@@ -151,12 +152,14 @@
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <RegExpr attribute="Macro in String" context="HLSStringMacro" String="\(([-\w]+):" lookAhead="true"/>
+        <RegExpr attribute="Verbatim String" context="HLVString" String="(`+)"/>
         <DetectChar attribute="String" context="#pop" char="'"/>
       </context>
       <context name="HLDString" attribute="String" lineEndContext="#stay">
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <RegExpr attribute="Macro in String" context="HLDStringMacro" String="\(([-\w]+):" lookAhead="true"/>
+        <RegExpr attribute="Verbatim String" context="HLVString" String="(`+)"/>
         <DetectChar attribute="String" context="#pop" char="&quot;"/>
       </context>
       <context name="HLSStringMacro" attribute="Macro in String" lineEndContext="#stay">
@@ -170,6 +173,7 @@
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <DetectChar attribute="Macro in String" context="HLSStringParameter" char="("/>
         <DetectChar attribute="Macro in String" context="#pop" char=")"/>
+        <RegExpr attribute="Verbatim String" context="HLVString" String="(`+)"/>
         <RegExpr attribute="String" context="#pop" String="(?&lt;!\\)'" lookAhead="true"/>
       </context>
       <context name="HLDStringParameter" attribute="Macro in String" lineEndContext="#stay">
@@ -177,7 +181,11 @@
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <DetectChar attribute="Macro in String" context="HLDStringParameter" char="("/>
         <DetectChar attribute="Macro in String" context="#pop" char=")"/>
+        <RegExpr attribute="Verbatim String" context="HLVString" String="(`+)"/>
         <RegExpr attribute="String" context="#pop" String="(?&lt;!\\)&quot;" lookAhead="true"/>
+      </context>
+      <context name="HLVString" attribute="Verbatim String" lineEndContext="#stay">
+        <RegExpr attribute="Verbatim String" context="#pop" String="%1" dynamic="true"/>
       </context>
       <context name="HLLink" attribute="Link" lineEndContext="#stay">
         <RegExpr attribute="Link Text" context="#stay" String="%1" dynamic="true"/>
@@ -198,6 +206,7 @@
       <itemData name="Temp Variable" defStyleNum="dsVariable"/>
       <itemData name="String" defStyleNum="dsString" />
       <itemData name="Macro in String" defStyleNum="dsSpecialString"/>
+      <itemData name="Verbatim String" defStyleNum="dsVerbatimString" />
       <itemData name="Number" defStyleNum="dsFloat" />
       <itemData name="Link Text" defStyleNum="dsOthers" underline="true"/>
       <itemData name="Link" defStyleNum="dsOthers"/>
