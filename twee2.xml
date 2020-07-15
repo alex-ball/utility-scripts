@@ -170,14 +170,14 @@
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <DetectChar attribute="Macro in String" context="HLSStringParameter" char="("/>
         <DetectChar attribute="Macro in String" context="#pop" char=")"/>
-        <DetectChar attribute="String" context="#pop" char="'" lookAhead="true"/>
+        <RegExpr attribute="String" context="#pop" String="(?&lt;!\\)'" lookAhead="true"/>
       </context>
       <context name="HLDStringParameter" attribute="Macro in String" lineEndContext="#stay">
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <DetectChar attribute="Macro in String" context="HLDStringParameter" char="("/>
         <DetectChar attribute="Macro in String" context="#pop" char=")"/>
-        <DetectChar attribute="String" context="#pop" char="&quot;" lookAhead="true"/>
+        <RegExpr attribute="String" context="#pop" String="(?&lt;!\\)&quot;" lookAhead="true"/>
       </context>
       <context name="HLLink" attribute="Link" lineEndContext="#stay">
         <RegExpr attribute="Link Text" context="#stay" String="%1" dynamic="true"/>
