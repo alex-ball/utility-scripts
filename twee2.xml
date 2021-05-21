@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd"
+[
+	<!-- names must start with a letter, ideogram or underscore. \w matches any
+		 word character *or* a number, hence the lookahead -->
+	<!ENTITY name    "(?![0-9])[\w_:][\w.:_-]*">
+	<!ENTITY entref  "&amp;(?:#[0-9]+|#[xX][0-9A-Fa-f]+|&name;);">
+]>
 <language
     name="Twee 2"
     section="Sources"
@@ -127,6 +134,8 @@
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <RegExpr attribute="Verbatim String" context="HLVString" String="(`+)"/>
+        <RegExpr attribute="Element" context="HLElement" String="&lt;&name;" beginRegion="element"/>
+        <IncludeRules context="FindEntityRefs" />
       </context>
       <context name="HLMacro" attribute="Macro" lineEndContext="#stay">
         <DetectChar attribute="Macro" context="#pop!HLParameter" char=":"/>
@@ -192,9 +201,45 @@
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <Detect2Chars attribute="Link" context="#pop" char="]" char1="]"/>
       </context>
+      <context name="HLElement" attribute="Other Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Element" context="#pop" char="/" char1="&gt;" endRegion="element" />
+        <DetectChar attribute="Element" context="HLElementContent" char="&gt;" />
+        <RegExpr attribute="Attribute" context="HLAttribute" String="(?:^|\s+)&name;" />
+        <RegExpr attribute="Error" context="#stay" String="\S" />
+      </context>
+      <context name="HLElementContent" attribute="Other Text" lineEndContext="#stay">
+        <RegExpr attribute="Element" context="HLElementEnd" String="&lt;/&name;" />
+        <IncludeRules context="Harlowe" />
+      </context>
+      <context name="HLElementEnd" attribute="Other Text" lineEndContext="#stay">
+        <DetectChar attribute="Element" context="#pop#pop#pop" char="&gt;" endRegion="element" />
+        <RegExpr attribute="Error" context="#stay" String="\S" />
+      </context>
+      <context name="HLAttribute" attribute="Other Text" lineEndContext="#stay">
+        <DetectChar attribute="Attribute" context="HLValue" char="=" />
+        <RegExpr attribute="Error" context="#stay" String="\S" />
+      </context>
+      <context name="HLValue" attribute="Other Text" lineEndContext="#stay">
+        <DetectChar attribute="Value" context="HLValueDQ" char="&quot;" />
+        <DetectChar attribute="Value" context="HLValueSQ" char="&apos;" />
+        <RegExpr attribute="Error" context="#stay" String="\S" />
+      </context>
+      <context name="HLValueDQ" attribute="Value" lineEndContext="#stay">
+        <DetectChar attribute="Value" context="#pop#pop#pop" char="&quot;" />
+        <IncludeRules context="FindEntityRefs" />
+      </context>
+      <context name="HLValueSQ" attribute="Value" lineEndContext="#stay">
+        <DetectChar attribute="Value" context="#pop#pop#pop" char="&apos;" />
+        <IncludeRules context="FindEntityRefs" />
+      </context>
+      <context name="FindEntityRefs" attribute="Other Text" lineEndContext="#stay">
+        <RegExpr attribute="EntityRef" context="#stay" String="&entref;" />
+        <AnyChar attribute="Error" context="#stay" String="&amp;&lt;" />
+      </context>
     </contexts>
     <itemDatas>
       <itemData name="Normal Text" defStyleNum="dsNormal"/>
+      <itemData name="Other Text" defStyleNum="dsNormal" />
       <itemData name="Passage Start" defStyleNum="dsAnnotation"/>
       <itemData name="Passage Name" defStyleNum="dsBuiltIn"/>
       <itemData name="Tags" defStyleNum="dsPreprocessor"/>
@@ -214,6 +259,11 @@
       <itemData name="Operator" defStyleNum="dsOthers"/>
       <itemData name="Dataname" defStyleNum="dsChar"/>
       <itemData name="Lambda" defStyleNum="dsOthers" italic="true"/>
+      <itemData name="Element" defStyleNum="dsKeyword" spellChecking="false"/>
+      <itemData name="Attribute" defStyleNum="dsOthers" spellChecking="false"/>
+      <itemData name="Value" defStyleNum="dsString" spellChecking="false"/>
+      <itemData name="EntityRef" defStyleNum="dsDecVal" spellChecking="false" />
+      <itemData name="Error" defStyleNum="dsError" spellChecking="false" />
     </itemDatas>
   </highlighting>
 </language>
