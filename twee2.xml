@@ -134,6 +134,7 @@
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <RegExpr attribute="Verbatim String" context="HLVString" String="(`+)"/>
+        <RegExpr attribute="Element" context="HLEmptyElement" String="&lt;(area|base|br|col|embed|hr|img|input|keygen|link|meta|param|source|track|wbr)" beginRegion="element"/>
         <RegExpr attribute="Element" context="HLElement" String="&lt;&name;" beginRegion="element"/>
         <IncludeRules context="FindEntityRefs" />
       </context>
@@ -204,6 +205,11 @@
       <context name="HLElement" attribute="Other Text" lineEndContext="#stay">
         <Detect2Chars attribute="Element" context="#pop" char="/" char1="&gt;" endRegion="element" />
         <DetectChar attribute="Element" context="HLElementContent" char="&gt;" />
+        <RegExpr attribute="Attribute" context="HLAttribute" String="(?:^|\s+)&name;" />
+        <RegExpr attribute="Error" context="#stay" String="\S" />
+      </context>
+      <context name="HLEmptyElement" attribute="Other Text" lineEndContext="#stay">
+        <DetectChar attribute="Element" context="#pop" char="&gt;" endRegion="element" />
         <RegExpr attribute="Attribute" context="HLAttribute" String="(?:^|\s+)&name;" />
         <RegExpr attribute="Error" context="#stay" String="\S" />
       </context>
