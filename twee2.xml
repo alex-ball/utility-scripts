@@ -17,7 +17,8 @@
     author="Alex Ball (ab318@bath.ac.uk)"
     indenter="normal">
   <highlighting>
-    <list name="keywords">
+    <!-- Harlowe vocabulary -->
+    <list name="hl-keywords">
       <item>exit</item>
       <item>exits</item>
       <item>false</item>
@@ -43,7 +44,7 @@
       <item>gray</item>
       <item>grey</item>
     </list>
-    <list name="operators">
+    <list name="hl-operators">
       <item>is</item>
       <item>is not</item>
       <item>contains</item>
@@ -69,13 +70,13 @@
       <item>not</item>
       <item>to</item>
     </list>
-    <list name="datanames">
+    <list name="hl-datanames">
       <item>last</item>
       <item>length</item>
       <item>any</item>
       <item>all</item>
     </list>
-    <list name="lambdas">
+    <list name="hl-lambdas">
       <item>where</item>
       <item>via</item>
       <item>making</item>
@@ -84,29 +85,47 @@
     </list>
     <contexts>
       <context name="Base" attribute="Normal Text" lineEndContext="#stay">
-        <Detect2Chars attribute="Passage Start" context="PassageHeader" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
+        <Detect2Chars attribute="Passage Start" context="PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
         <IncludeRules context="Harlowe"/>
       </context>
+      <context name="BaseSC" attribute="Coordinates" lineEndContext="#stay">
+        <Detect2Chars attribute="Passage Start" context="PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
+        <IncludeRules context="SugarCube"/>
+      </context>
       <context name="PassageHeader" attribute="Passage Name" lineEndContext="#pop">
-        <DetectChar attribute="Tags" context="PassageTags" char="["/>
         <RangeDetect attribute="Coordinates" context="#stay" char="&lt;"  char1="&gt;"/>
         <DetectChar attribute="Normal Text" context="InlineJSON" char="{"/>
+      </context>
+      <context name="PassageHeaderNormal" attribute="Passage Name" lineEndContext="#pop">
+        <WordDetect attribute="Passage Name" context="#pop!PassageHeaderJSON" String="StoryData"/>
+        <DetectChar attribute="Tags" context="PassageTags" char="["/>
+        <IncludeRules context="PassageHeader"/>
       </context>
       <context name="PassageHeaderCSS" attribute="Passage Name" lineEndContext="#pop!CSS">
-        <RangeDetect attribute="Coordinates" context="#stay" char="&lt;"  char1="&gt;"/>
-        <DetectChar attribute="Normal Text" context="InlineJSON" char="{"/>
+        <IncludeRules context="PassageHeader"/>
+      </context>
+      <context name="PassageHeaderJS" attribute="Passage Name" lineEndContext="#pop!JS">
+        <IncludeRules context="PassageHeader"/>
       </context>
       <context name="PassageHeaderHAML" attribute="Passage Name" lineEndContext="#pop!HAML">
+        <IncludeRules context="PassageHeader"/>
+      </context>
+      <context name="PassageHeaderJSON" attribute="Passage Name" lineEndContext="#pop!JSON">
         <RangeDetect attribute="Coordinates" context="#stay" char="&lt;"  char1="&gt;"/>
+        <RangeDetect attribute="Tags" context="#stay" char="["  char1="]"/>
         <DetectChar attribute="Normal Text" context="InlineJSON" char="{"/>
       </context>
       <context name="PassageTags" attribute="Tags" lineEndContext="#stay">
         <WordDetect attribute="Tags" context="PassageTagsCSS" String="stylesheet" insensitive="true"/>
+        <WordDetect attribute="Tags" context="PassageTagsJS" String="script" insensitive="true"/>
         <WordDetect attribute="Tags" context="PassageTagsHAML" String="haml" insensitive="true"/>
         <DetectChar attribute="Tags" context="#pop" char="]"/>
       </context>
       <context name="PassageTagsCSS" attribute="Tags" lineEndContext="#stay">
         <DetectChar attribute="Tags" context="#pop#pop!PassageHeaderCSS" char="]"/>
+      </context>
+      <context name="PassageTagsJS" attribute="Tags" lineEndContext="#stay">
+        <DetectChar attribute="Tags" context="#pop#pop!PassageHeaderJS" char="]"/>
       </context>
       <context name="PassageTagsHAML" attribute="Tags" lineEndContext="#stay">
         <DetectChar attribute="Tags" context="#pop#pop!PassageHeaderHAML" char="]"/>
@@ -115,15 +134,52 @@
         <DetectChar attribute="Normal Text" context="#pop" char="}"/>
         <IncludeRules context="Pair##JSON" includeAttrib="true"/>
       </context>
+      <!-- Look for story format... -->
+      <context name="JSON" attribute="Error" lineEndContext="#stay">
+        <DetectSpaces context="#stay" attribute="Normal Text" />
+        <DetectChar char="{" context="JSONPair" beginRegion="Region_Object" attribute="Seperator Pair" />
+        <Detect2Chars attribute="Passage Start" context="#pop!PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
+      </context>
+      <context name="JSONPair" attribute="Error" lineEndContext="#stay">
+        <StringDetect String="&quot;format&quot;" context="#pop!JSONFormatKey" attribute="String Key" insensitive="true"/>
+        <DetectChar char="}" context="#pop#pop" endRegion="Region_Object" attribute="Seperator Pair"/>
+        <IncludeRules context="Pair##JSON" includeAttrib="true"/>
+      </context>
+      <context name="JSONFormatKey" attribute="Error" lineEndContext="#stay">
+        <DetectSpaces context="#stay" attribute="Normal Text" />
+        <DetectChar char=":" context="#pop!JSONFormatValue" attribute="Seperator Pair"/>
+      </context>
+      <context name="JSONFormatValue" attribute="Error" lineEndContext="#stay">
+        <DetectSpaces context="#stay" attribute="Normal Text" />
+        <DetectChar char="&quot;" context="#pop!JSONFormatValueString" attribute="String Value"/>
+      </context>
+      <!-- Story format switches -->
+      <context name="JSONFormatValueString" attribute="String Value" lineEndContext="#stay">
+        <StringDetect String="SugarCube" context="#pop!JSONFormatValueSC" attribute="Coordinates"/>
+        <DetectChar char="&quot;" context="#pop!JSONPair" attribute="String Value"/>
+      </context>
+      <context name="JSONFormatValueSC" attribute="String Value" lineEndContext="#stay">
+        <DetectChar char="&quot;" context="#pop!JSONPairSC" attribute="String Value"/>
+      </context>
+      <context name="JSONPairSC" attribute="Error" lineEndContext="#stay">
+        <DetectChar char="}" context="#pop#pop!BaseSC" endRegion="Region_Object" attribute="Seperator Pair"/>
+        <IncludeRules context="JSONPair"/>
+      </context>
+      <!-- End story format switches -->
       <context name="CSS" attribute="Normal Text" lineEndContext="#stay">
-        <Detect2Chars attribute="Passage Start" context="#pop" char=":" char1=":" column="0" lookAhead="true" />
+        <Detect2Chars attribute="Passage Start" context="#pop!PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
         <IncludeRules context="Base##CSS" includeAttrib="true"/>
       </context>
+      <context name="JS" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Passage Start" context="#pop!PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
+        <IncludeRules context="Normal##JavaScript" includeAttrib="true"/>
+      </context>
       <context name="HAML" attribute="Normal Text" lineEndContext="#stay">
-        <Detect2Chars attribute="Passage Start" context="#pop" char=":" char1=":" column="0" lookAhead="true" />
+        <Detect2Chars attribute="Passage Start" context="#pop!PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
         <!-- <IncludeRules context="normal##Haml" includeAttrib="true"/> -->
         <IncludeRules context="Harlowe"/>
       </context>
+      <!-- Harlowe story format -->
       <context name="Harlowe" attribute="Normal Text" lineEndContext="#stay">
         <RegExpr attribute="Macro" context="HLMacro" String="\(([-\w]+):" lookAhead="true"/>
         <RegExpr attribute="Link" context="HLLink" String="\[\[([^\[]+)-&gt;[^\]&gt;]+\]\]" lookAhead="true"/>
@@ -147,10 +203,10 @@
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <RegExpr attribute="Hook" context="#stay" String="\?\w+\b"/>
         <RegExpr attribute="Dataname" context="#stay" String="\d+(st|nd|rd|th)(last)?(to(\d+(st|nd|rd|th)(last)?|last))?"/>
-        <keyword attribute="Keyword" context="#stay" String="keywords"/>
-        <keyword attribute="Operator" context="#stay" String="operators"/>
-        <keyword attribute="Dataname" context="#stay" String="datanames"/>
-        <keyword attribute="Lambda" context="#stay" String="lambdas"/>
+        <keyword attribute="Keyword" context="#stay" String="hl-keywords"/>
+        <keyword attribute="Operator" context="#stay" String="hl-operators"/>
+        <keyword attribute="Dataname" context="#stay" String="hl-datanames"/>
+        <keyword attribute="Lambda" context="#stay" String="hl-lambdas"/>
         <Int attribute="Number" context="#stay"/>
         <Float attribute="Number" context="#stay"/>
         <DetectChar attribute="String" context="HLDString" char="&quot;"/>
@@ -202,6 +258,18 @@
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <Detect2Chars attribute="Link" context="#pop" char="]" char1="]"/>
       </context>
+      <!-- SugarCube story format -->
+      <context name="SugarCube" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Macro" context="SCMacro" char="&lt;" char1="&lt;"/>
+      </context>
+      <context name="SCMacro" attribute="Macro" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text" context="#pop!SCParameter"/>
+        <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
+      </context>
+      <context name="SCParameter" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
+      </context>
+      <!-- Common styles -->
       <context name="HLElement" attribute="Other Text" lineEndContext="#stay">
         <Detect2Chars attribute="Element" context="#pop" char="/" char1="&gt;" endRegion="element" />
         <DetectChar attribute="Element" context="HLElementContent" char="&gt;" />
@@ -270,6 +338,10 @@
       <itemData name="Value" defStyleNum="dsString" spellChecking="false"/>
       <itemData name="EntityRef" defStyleNum="dsDecVal" spellChecking="false" />
       <itemData name="Error" defStyleNum="dsError" spellChecking="false" />
+      <itemData name="Seperator Pair" defStyleNum="dsFunction" bold="true" />
+      <itemData name="Seperator Array" defStyleNum="dsOthers" bold="true" />
+      <itemData name="String Key" defStyleNum="dsDataType" />
+      <itemData name="String Value" defStyleNum="dsString" />
     </itemDatas>
   </highlighting>
 </language>
