@@ -88,7 +88,7 @@
         <Detect2Chars attribute="Passage Start" context="PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
         <IncludeRules context="Harlowe"/>
       </context>
-      <context name="BaseSC" attribute="Coordinates" lineEndContext="#stay">
+      <context name="BaseSC" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Passage Start" context="PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
         <IncludeRules context="SugarCube"/>
       </context>
@@ -155,7 +155,8 @@
       </context>
       <!-- Story format switches -->
       <context name="JSONFormatValueString" attribute="String Value" lineEndContext="#stay">
-        <StringDetect String="SugarCube" context="#pop!JSONFormatValueSC" attribute="Coordinates"/>
+        <StringDetect String="Harlowe" context="#stay" attribute="Keyword"/>
+        <StringDetect String="SugarCube" context="#pop!JSONFormatValueSC" attribute="Keyword"/>
         <DetectChar char="&quot;" context="#pop!JSONPair" attribute="String Value"/>
       </context>
       <context name="JSONFormatValueSC" attribute="String Value" lineEndContext="#stay">
@@ -190,7 +191,7 @@
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <RegExpr attribute="Verbatim String" context="HLVString" String="(`+)"/>
-        <RegExpr attribute="Element" context="HLEmptyElement" String="&lt;(area|base|br|col|embed|hr|img|input|keygen|link|meta|param|source|track|wbr)" beginRegion="element"/>
+        <RegExpr attribute="Element" context="HTMLEmptyElement" String="&lt;(area|base|br|col|embed|hr|img|input|keygen|link|meta|param|source|track|wbr)" beginRegion="element"/>
         <RegExpr attribute="Element" context="HLElement" String="&lt;&name;" beginRegion="element"/>
         <IncludeRules context="FindEntityRefs" />
       </context>
@@ -258,9 +259,29 @@
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <Detect2Chars attribute="Link" context="#pop" char="]" char1="]"/>
       </context>
+      <context name="HLElement" attribute="Other Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Element" context="#pop" char="/" char1="&gt;" endRegion="element" />
+        <DetectChar attribute="Element" context="HLElementContent" char="&gt;" />
+        <RegExpr attribute="Attribute" context="HTMLAttribute" String="(?:^|\s+)&name;" />
+        <RegExpr attribute="Error" context="#stay" String="\S" />
+      </context>
+      <context name="HLElementContent" attribute="Other Text" lineEndContext="#stay">
+        <RegExpr attribute="Element" context="HTMLElementEnd" String="&lt;/&name;" />
+        <IncludeRules context="Harlowe" />
+      </context>
       <!-- SugarCube story format -->
       <context name="SugarCube" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Macro" context="SCMacro" char="&lt;" char1="&lt;"/>
+        <RegExpr attribute="Link" context="SCLink" String="\[\[([^\[]+)-&gt;[^\]&gt;]+\]\]" lookAhead="true"/>
+        <RegExpr attribute="Link" context="SCLink" String="\[\[[^\[&lt;]+&lt;-([^\]]+)\]\]" lookAhead="true"/>
+        <RegExpr attribute="Link" context="SCLink" String="\[\[([^\[&lt;\|&gt;\]]+)?\|(?:[^\[&lt;\|&gt;\]]+)\](?:\[[^\[&lt;\|&gt;\]]+\])?\]" lookAhead="true"/>
+        <RegExpr attribute="Label" context="#stay" String="\|([-\w]+)[&gt;)]"/>
+        <RegExpr attribute="Label" context="#stay" String="[&lt;(]([-\w]+)\|"/>
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <RegExpr attribute="Element" context="HTMLEmptyElement" String="&lt;(area|base|br|col|embed|hr|img|input|keygen|link|meta|param|source|track|wbr)" beginRegion="element"/>
+        <RegExpr attribute="Element" context="SCElement" String="&lt;&name;" beginRegion="element"/>
+        <IncludeRules context="FindEntityRefs" />
       </context>
       <context name="SCMacro" attribute="Macro" lineEndContext="#stay">
         <DetectSpaces attribute="Normal Text" context="#pop!SCParameter"/>
@@ -269,40 +290,45 @@
       <context name="SCParameter" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
       </context>
-      <!-- Common styles -->
-      <context name="HLElement" attribute="Other Text" lineEndContext="#stay">
+      <context name="SCLink" attribute="Link" lineEndContext="#stay">
+        <RegExpr attribute="Link Text" context="#stay" String="%1" dynamic="true"/>
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <Detect2Chars attribute="Link" context="#pop" char="]" char1="]"/>
+      </context>
+      <context name="SCElement" attribute="Other Text" lineEndContext="#stay">
         <Detect2Chars attribute="Element" context="#pop" char="/" char1="&gt;" endRegion="element" />
-        <DetectChar attribute="Element" context="HLElementContent" char="&gt;" />
-        <RegExpr attribute="Attribute" context="HLAttribute" String="(?:^|\s+)&name;" />
+        <DetectChar attribute="Element" context="SCElementContent" char="&gt;" />
+        <RegExpr attribute="Attribute" context="HTMLAttribute" String="(?:^|\s+)&name;" />
         <RegExpr attribute="Error" context="#stay" String="\S" />
       </context>
-      <context name="HLEmptyElement" attribute="Other Text" lineEndContext="#stay">
+      <context name="SCElementContent" attribute="Other Text" lineEndContext="#stay">
+        <RegExpr attribute="Element" context="HTMLElementEnd" String="&lt;/&name;" />
+        <IncludeRules context="SugarCube" />
+      </context>
+      <!-- Common contexts -->
+      <context name="HTMLEmptyElement" attribute="Other Text" lineEndContext="#stay">
         <DetectChar attribute="Element" context="#pop" char="&gt;" endRegion="element" />
-        <RegExpr attribute="Attribute" context="HLAttribute" String="(?:^|\s+)&name;" />
+        <RegExpr attribute="Attribute" context="HTMLAttribute" String="(?:^|\s+)&name;" />
         <RegExpr attribute="Error" context="#stay" String="\S" />
       </context>
-      <context name="HLElementContent" attribute="Other Text" lineEndContext="#stay">
-        <RegExpr attribute="Element" context="HLElementEnd" String="&lt;/&name;" />
-        <IncludeRules context="Harlowe" />
-      </context>
-      <context name="HLElementEnd" attribute="Other Text" lineEndContext="#stay">
+      <context name="HTMLElementEnd" attribute="Other Text" lineEndContext="#stay">
         <DetectChar attribute="Element" context="#pop#pop#pop" char="&gt;" endRegion="element" />
         <RegExpr attribute="Error" context="#stay" String="\S" />
       </context>
-      <context name="HLAttribute" attribute="Other Text" lineEndContext="#stay">
-        <DetectChar attribute="Attribute" context="HLValue" char="=" />
+      <context name="HTMLAttribute" attribute="Other Text" lineEndContext="#stay">
+        <DetectChar attribute="Attribute" context="HTMLValue" char="=" />
         <RegExpr attribute="Error" context="#stay" String="\S" />
       </context>
-      <context name="HLValue" attribute="Other Text" lineEndContext="#stay">
-        <DetectChar attribute="Value" context="HLValueDQ" char="&quot;" />
-        <DetectChar attribute="Value" context="HLValueSQ" char="&apos;" />
+      <context name="HTMLValue" attribute="Other Text" lineEndContext="#stay">
+        <DetectChar attribute="Value" context="HTMLValueDQ" char="&quot;" />
+        <DetectChar attribute="Value" context="HTMLValueSQ" char="&apos;" />
         <RegExpr attribute="Error" context="#stay" String="\S" />
       </context>
-      <context name="HLValueDQ" attribute="Value" lineEndContext="#stay">
+      <context name="HTMLValueDQ" attribute="Value" lineEndContext="#stay">
         <DetectChar attribute="Value" context="#pop#pop#pop" char="&quot;" />
         <IncludeRules context="FindEntityRefs" />
       </context>
-      <context name="HLValueSQ" attribute="Value" lineEndContext="#stay">
+      <context name="HTMLValueSQ" attribute="Value" lineEndContext="#stay">
         <DetectChar attribute="Value" context="#pop#pop#pop" char="&apos;" />
         <IncludeRules context="FindEntityRefs" />
       </context>
