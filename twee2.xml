@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE language SYSTEM "language.dtd"
 [
-	<!-- names must start with a letter, ideogram or underscore. \w matches any
-		 word character *or* a number, hence the lookahead -->
-	<!ENTITY name    "(?![0-9])[\w_:][\w.:_-]*">
-	<!ENTITY entref  "&amp;(?:#[0-9]+|#[xX][0-9A-Fa-f]+|&name;);">
+  <!-- names must start with a letter, ideogram or underscore. \w matches any
+    word character *or* a number, hence the lookahead -->
+  <!ENTITY name    "(?![0-9])[\w_:][\w.:_-]*">
+  <!ENTITY identifier "[a-zA-Z_$[:^ascii:]][\w$[:^ascii:]]*">
+  <!ENTITY entref  "&amp;(?:#[0-9]+|#[xX][0-9A-Fa-f]+|&name;);">
 ]>
 <language
     name="Twee 2"
@@ -82,6 +83,47 @@
       <item>making</item>
       <item>when</item>
       <item>each</item>
+    </list>
+    <!-- SugarCube vocabulary -->
+    <list name="sc-macros-empty">
+      <item>set</item>
+      <item>unset</item>
+      <item>run</item>
+      <item>include</item>
+      <item>print</item>
+      <item>elseif</item>
+      <item>else</item>
+      <item>break</item>
+      <item>continue</item>
+      <item>case</item>
+      <item>default</item>
+      <item>checkbox</item>
+      <item>option</item>
+      <item>optionsfrom</item>
+      <item>numberbox</item>
+      <item>radiobutton</item>
+      <item>textarea</item>
+      <item>textbox</item>
+      <item>actions</item>
+      <item>back</item>
+      <item>choice</item>
+      <item>return</item>
+      <item>addclass</item>
+      <item>copy</item>
+      <item>remove</item>
+      <item>removeclass</item>
+      <item>toggleclass</item>
+      <item>audio</item>
+      <item>cacheaudio</item>
+      <item>track</item>
+      <item>masteraudio</item>
+      <item>playlist</item>
+      <item>removeaudiogroup</item>
+      <item>removeplaylist</item>
+      <item>waitforaudio</item>
+      <item>goto</item>
+      <item>stop</item>
+      <item>next</item>
     </list>
     <contexts>
       <context name="Base" attribute="Normal Text" lineEndContext="#stay">
@@ -271,29 +313,68 @@
       </context>
       <!-- SugarCube story format -->
       <context name="SugarCube" attribute="Normal Text" lineEndContext="#stay">
-        <Detect2Chars attribute="Macro" context="SCMacro" char="&lt;" char1="&lt;"/>
+        <RegExpr attribute="Macro" context="SCEmptyMacro" String="<<(set|unset|run|=|-|include|print|elseif|else|break|continue|case|default|checkbox|option|optionsfrom|numberbox|radiobutton|textarea|textbox|actions|back|choice|return|addclass|copy|remove|removeclass|toggleclass|audio|cacheaudio|track|masteraudio|playlist|removeaudiogroup|removeplaylist|waitforaudio|goto|stop|next)"/>
+        <Detect2Chars attribute="Macro" context="SCMacro" char="&lt;" char1="&lt;" beginRegion="macro"/>
         <RegExpr attribute="Link" context="SCLink" String="\[\[([^\[]+)-&gt;[^\]&gt;]+\]\]" lookAhead="true"/>
         <RegExpr attribute="Link" context="SCLink" String="\[\[[^\[&lt;]+&lt;-([^\]]+)\]\]" lookAhead="true"/>
         <RegExpr attribute="Link" context="SCLink" String="\[\[([^\[&lt;\|&gt;\]]+)?\|(?:[^\[&lt;\|&gt;\]]+)\](?:\[[^\[&lt;\|&gt;\]]+\])?\]" lookAhead="true"/>
         <RegExpr attribute="Label" context="#stay" String="\|([-\w]+)[&gt;)]"/>
         <RegExpr attribute="Label" context="#stay" String="[&lt;(]([-\w]+)\|"/>
+        <Detect2Chars attribute="Variable" context="#stay" char="$" char1="$"/>
+        <RegExpr attribute="Variable" context="SCNakedVariable" String="\$\w+\["/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="SCNakedTempVariable" String="\b_\w+\["/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
         <RegExpr attribute="Element" context="HTMLEmptyElement" String="&lt;(area|base|br|col|embed|hr|img|input|keygen|link|meta|param|source|track|wbr)" beginRegion="element"/>
+        <StringDetect attribute="Element" context="SCNoWikiElement" String="&lt;nowiki" beginRegion="element"/>
         <RegExpr attribute="Element" context="SCElement" String="&lt;&name;" beginRegion="element"/>
+        <StringDetect attribute="Verbatim String" context="SCNoWikiQ" String="&quot;&quot;&quot;"/>
+        <StringDetect attribute="Verbatim String" context="SCCode" String="{{{"/>
         <IncludeRules context="FindEntityRefs" />
       </context>
-      <context name="SCMacro" attribute="Macro" lineEndContext="#stay">
+      <context name="SCMacro" attribute="Error" lineEndContext="#stay">
+        <keyword attribute="Macro" context="#pop!SCEmptyMacro" String="sc-macros-empty"/>
+        <DetectChar attribute="Macro" context="#pop!SCEmptyMacro" char="="/>
+        <DetectChar attribute="Macro" context="#pop!SCEmptyMacro" char="-"/>
         <DetectSpaces attribute="Normal Text" context="#pop!SCParameter"/>
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
       </context>
+      <context name="SCEmptyMacro" attribute="Error" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text" context="#pop!SCParameter"/>
+        <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
+      </context>
+      <context name="SCEndMacro" attribute="Error" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text" context="#pop!SCParameter"/>
+        <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;" endRegion="macro"/>
+      </context>
       <context name="SCParameter" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <IncludeRules context="Normal##JavaScript" includeAttrib="true"/>
       </context>
       <context name="SCLink" attribute="Link" lineEndContext="#stay">
         <RegExpr attribute="Link Text" context="#stay" String="%1" dynamic="true"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <Detect2Chars attribute="Link" context="#pop" char="]" char1="]"/>
+      </context>
+      <context name="SCNakedVariable" attribute="Error" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"  context="#stay"/>
+        <RegExpr attribute="Number" context="#stay" String="\d+"/>
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <RangeDetect attribute="String" context="#stay" char="&quot;"  char1="&quot;"/>
+        <RangeDetect attribute="String" context="#stay" char="'"  char1="'"/>
+        <DetectChar attribute="Variable" context="#pop" char="]"/>
+      </context>
+      <context name="SCNakedTempVariable" attribute="Error" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text" context="#stay" />
+        <RegExpr attribute="Number" context="#stay" String="\d+"/>
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
+        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <RangeDetect attribute="String" context="#stay" char="&quot;"  char1="&quot;"/>
+        <RangeDetect attribute="String" context="#stay" char="'"  char1="'"/>
+        <DetectChar attribute="Temp Variable" context="#pop" char="]"/>
       </context>
       <context name="SCElement" attribute="Other Text" lineEndContext="#stay">
         <Detect2Chars attribute="Element" context="#pop" char="/" char1="&gt;" endRegion="element" />
@@ -304,6 +385,21 @@
       <context name="SCElementContent" attribute="Other Text" lineEndContext="#stay">
         <RegExpr attribute="Element" context="HTMLElementEnd" String="&lt;/&name;" />
         <IncludeRules context="SugarCube" />
+      </context>
+      <context name="SCNoWikiElement" attribute="Other Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Element" context="#pop" char="/" char1="&gt;" endRegion="element" />
+        <DetectChar attribute="Element" context="SCNoWikiElementContent" char="&gt;" />
+        <RegExpr attribute="Attribute" context="HTMLAttribute" String="(?:^|\s+)&name;" />
+        <RegExpr attribute="Error" context="#stay" String="\S" />
+      </context>
+      <context name="SCNoWikiElementContent" attribute="Verbatim Text" lineEndContext="#stay">
+        <StringDetect attribute="Element" context="HTMLElementEnd" String="&lt;/nowiki" />
+      </context>
+      <context name="SCNoWikiQ" attribute="Verbatim String" lineEndContext="#stay">
+        <StringDetect attribute="Verbatim String" context="#pop" String="&quot;&quot;&quot;"/>
+      </context>
+      <context name="SCCode" attribute="Verbatim String" lineEndContext="#stay">
+        <StringDetect attribute="Verbatim String" context="#pop" String="}}}"/>
       </context>
       <!-- Common contexts -->
       <context name="HTMLEmptyElement" attribute="Other Text" lineEndContext="#stay">
