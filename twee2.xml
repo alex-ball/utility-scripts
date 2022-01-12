@@ -125,6 +125,32 @@
       <item>stop</item>
       <item>next</item>
     </list>
+    <list name="sc-macros-container">
+      <item>capture</item>
+      <item>script</item>
+      <item>nobr</item>
+      <item>silently</item>
+      <item>type</item>
+      <item>if</item>
+      <item>for</item>
+      <item>switch</item>
+      <item>button</item>
+      <item>cycle</item>
+      <item>link</item>
+      <item>linkappend</item>
+      <item>linkprepend</item>
+      <item>linkreplace</item>
+      <item>listbox</item>
+      <item>append</item>
+      <item>prepend</item>
+      <item>replace</item>
+      <item>createaudiogroup</item>
+      <item>createplaylist</item>
+      <item>done</item>
+      <item>repeat</item>
+      <item>timed</item>
+      <item>widget</item>
+    </list>
     <contexts>
       <context name="Base" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Passage Start" context="PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
@@ -257,11 +283,6 @@
       <context name="Harlowe" attribute="Normal Text" lineEndContext="#stay">
         <RegExpr attribute="Macro" context="HLMacro" String="\(([-\w]+):" lookAhead="true"/>
         <RegExpr attribute="Link" context="HLLink" String="\[\[(?:([^\[]+)-&gt;[^\]&gt;]+|[^\[&lt;]+&lt;-([^\]]+)|([^\[&lt;&gt;\]]+))\]\]" lookAhead="true"/>
-        <!--
-        <RegExpr attribute="Link" context="HLLink" String="\[\[([^\[]+)-&gt;[^\]&gt;]+\]\]" lookAhead="true"/>
-        <RegExpr attribute="Link" context="HLLink" String="\[\[[^\[&lt;]+&lt;-([^\]]+)\]\]" lookAhead="true"/>
-        <RegExpr attribute="Link" context="HLLink" String="\[\[([^\[&lt;&gt;\]]+)\]\]" lookAhead="true"/>
-        -->
         <RegExpr attribute="Label" context="#stay" String="(?:\|([-\w]+)[&gt;)]|[&lt;(]([-\w]+)\|)"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
@@ -348,8 +369,7 @@
       </context>
       <!-- SugarCube story format -->
       <context name="SugarCube" attribute="Normal Text" lineEndContext="#stay">
-        <RegExpr attribute="Macro" context="SCEmptyMacro" String="&lt;&lt;(set|unset|run|=|-|include|print|elseif|else|break|continue|case|default|checkbox|option|optionsfrom|numberbox|radiobutton|textarea|textbox|actions|back|choice|return|addclass|copy|remove|removeclass|toggleclass|audio|cacheaudio|track|masteraudio|playlist|removeaudiogroup|removeplaylist|waitforaudio|goto|stop|next)"/>
-        <Detect2Chars attribute="Macro" context="SCMacro" char="&lt;" char1="&lt;" beginRegion="macro"/>
+        <Detect2Chars attribute="Macro" context="SCMacro" char="&lt;" char1="&lt;"/>
         <RegExpr attribute="Link" context="SCLink" String="\[\[(?:([^\[]+)-&gt;[^\]&gt;]+\]|[^\[&lt;]+&lt;-([^\]]+)\]|([^\[&lt;\|&gt;\]]+)?\|(?:[^\[&lt;\|&gt;\]]+)\](?:\[[^\[&lt;\|&gt;\]]+\])?)\]" lookAhead="true"/>
         <RegExpr attribute="Label" context="#stay" String="\|([-\w]+)[&gt;)]|[&lt;(]([-\w]+)\|"/>
         <Detect2Chars attribute="Variable" context="#stay" char="$" char1="$"/>
@@ -364,22 +384,23 @@
         <StringDetect attribute="Verbatim String" context="SCCode" String="{{{"/>
         <IncludeRules context="FindEntityRefs" />
       </context>
-      <context name="SCMacro" attribute="Error" lineEndContext="#stay">
-        <keyword attribute="Macro" context="#pop!SCEmptyMacro" String="sc-macros-empty"/>
-        <AnyChar attribute="Macro" context="#pop!SCEmptyMacro" String="-="/>
+      <context name="SCMacro" attribute="User Macro" lineEndContext="#stay">
+        <DetectChar attribute="Macro" context="#pop!SCEndMacro" char="/"/>
+        <keyword attribute="Macro" context="#pop!SCStartMacro" String="sc-macros-container" beginRegion="macro"/>
+        <keyword attribute="Macro" context="#stay" String="sc-macros-empty"/>
+        <AnyChar attribute="Macro" context="#stay" String="-="/>
         <DetectSpaces attribute="Normal Text" context="#pop!SCParameter"/>
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
       </context>
-      <context name="SCEmptyMacro" attribute="Error" lineEndContext="#stay">
+      <context name="SCStartMacro" attribute="Error" lineEndContext="#stay">
         <DetectSpaces attribute="Normal Text" context="#pop!SCParameter"/>
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
       </context>
-      <!--
-      <context name="SCEndMacro" attribute="Error" lineEndContext="#stay">
-        <DetectSpaces attribute="Normal Text" context="#pop!SCParameter"/>
+      <context name="SCEndMacro" attribute="User Macro" lineEndContext="#stay">
+        <keyword attribute="Macro" context="#stay" String="sc-macros-container"/>
+        <DetectSpaces attribute="Error"/>
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;" endRegion="macro"/>
       </context>
-      -->
       <context name="SCParameter" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
@@ -387,7 +408,9 @@
         <IncludeRules context="Normal##JavaScript" includeAttrib="true"/>
       </context>
       <context name="SCLink" attribute="Link" lineEndContext="#stay">
-        <StringDetect attribute="Link Text" context="#stay" String="%1%2%3" dynamic="true"/>
+        <StringDetect attribute="Link Text" context="#stay" String="%1" dynamic="true"/>
+        <StringDetect attribute="Link Text" context="#stay" String="%2" dynamic="true"/>
+        <StringDetect attribute="Link Text" context="#stay" String="%3" dynamic="true"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <Detect2Chars attribute="Link" context="#pop" char="]" char1="]"/>
       </context>
@@ -443,6 +466,7 @@
       <itemData name="Tags" defStyleNum="dsPreprocessor"/>
       <itemData name="Coordinates" defStyleNum="dsSpecialString"/>
       <itemData name="Macro" defStyleNum="dsFunction" bold="true"/>
+      <itemData name="User Macro" defStyleNum="dsFunction" bold="false"/>
       <itemData name="Label" defStyleNum="dsExtension" bold="true"/>
       <itemData name="Hook" defStyleNum="dsExtension" bold="false"/>
       <itemData name="Variable" defStyleNum="dsVariable"/>
