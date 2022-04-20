@@ -294,7 +294,7 @@
       </context>
       <!-- Harlowe story format -->
       <context name="Harlowe" attribute="Normal Text" lineEndContext="#stay">
-        <RegExpr attribute="Macro" context="HLMacro" String="\(([-\w]+):" lookAhead="true"/>
+        <RegExpr attribute="Macro" context="HLMacro" String="\(([-\$\w]+):" lookAhead="true"/>
         <RegExpr attribute="Link" context="HLLink" String="\[\[(?:([^\[]+)-&gt;[^\]&gt;]+|[^\[&lt;]+&lt;-([^\]]+)|([^\[&lt;&gt;\]]+))\]\]" lookAhead="true"/>
         <RegExpr attribute="Label" context="#stay" String="(?:\|([-\w]+)[&gt;)]|[&lt;(]([-\w]+)\|)"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
@@ -305,6 +305,7 @@
         <IncludeRules context="FindEntityRefs" />
       </context>
       <context name="HLMacro" attribute="Macro" lineEndContext="#stay">
+        <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <DetectChar attribute="Macro" context="#pop!HLParameter" char=":"/>
       </context>
       <context name="HLParameter" attribute="Normal Text" lineEndContext="#stay">
