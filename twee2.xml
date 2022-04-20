@@ -400,6 +400,7 @@
       </context>
       <context name="SCMacro" attribute="User Macro" lineEndContext="#stay">
         <DetectChar attribute="Macro" context="#pop!SCEndMacro" char="/"/>
+        <StringDetect attribute="Macro" context="#pop!SCStartScript" String="script" beginRegion="macro"/>
         <keyword attribute="Macro" context="#pop!SCStartMacro" String="sc-macros-container" beginRegion="macro"/>
         <keyword attribute="Macro" context="#stay" String="sc-macros-empty"/>
         <AnyChar attribute="Macro" context="#stay" String="-="/>
@@ -415,10 +416,18 @@
         <DetectSpaces attribute="Error"/>
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;" endRegion="macro"/>
       </context>
+      <context name="SCStartScript" attribute="Error" lineEndContext="#stay">
+        <Detect2Chars attribute="Macro" context="#pop!SCMidScript" char="&gt;" char1="&gt;"/>
+      </context>
+      <context name="SCMidScript" attribute="Normal Text" lineEndContext="#stay">
+        <StringDetect attribute="Macro" context="#pop" String="&lt;&lt;/script&gt;&gt;" endRegion="macro" />
+        <IncludeRules context="Normal##JavaScript" includeAttrib="true"/>
+      </context>
       <context name="SCParameter" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Macro" context="#pop" char="&gt;" char1="&gt;"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
         <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <DetectChar attribute="Operator" context="#stay" char="/"/>
         <IncludeRules context="Normal##JavaScript" includeAttrib="true"/>
       </context>
       <context name="SCLink" attribute="Link" lineEndContext="#stay">
