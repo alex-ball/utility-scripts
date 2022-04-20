@@ -154,6 +154,12 @@
     <contexts>
       <context name="Base" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Passage Start" context="PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
+        <Detect2Chars attribute="Macro" context="#pop!BaseSC" char="&lt;" char1="&lt;" lookAhead="true"/>
+        <RegExpr attribute="Macro" context="#pop!BaseHL" String="\(([-\w]+):" lookAhead="true"/>
+        <IncludeRules context="Harlowe"/>
+      </context>
+      <context name="BaseHL" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Passage Start" context="PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
         <IncludeRules context="Harlowe"/>
       </context>
       <context name="BaseSC" attribute="Normal Text" lineEndContext="#stay">
@@ -223,12 +229,19 @@
       </context>
       <!-- Story format switches -->
       <context name="JSONFormatValueString" attribute="String Value" lineEndContext="#stay">
-        <StringDetect String="Harlowe" context="#stay" attribute="Keyword"/>
+        <StringDetect String="Harlowe" context="#pop!JSONFormatValueHL" attribute="Keyword"/>
         <StringDetect String="SugarCube" context="#pop!JSONFormatValueSC" attribute="Keyword"/>
         <DetectChar char="&quot;" context="#pop!JSONPair" attribute="String Value"/>
       </context>
+      <context name="JSONFormatValueHL" attribute="String Value" lineEndContext="#stay">
+        <DetectChar char="&quot;" context="#pop!JSONPairHL" attribute="String Value"/>
+      </context>
       <context name="JSONFormatValueSC" attribute="String Value" lineEndContext="#stay">
         <DetectChar char="&quot;" context="#pop!JSONPairSC" attribute="String Value"/>
+      </context>
+      <context name="JSONPairHL" attribute="Error" lineEndContext="#stay">
+        <DetectChar char="}" context="#pop#pop!BaseHL" endRegion="Region_Object" attribute="Seperator Pair"/>
+        <IncludeRules context="JSONPair"/>
       </context>
       <context name="JSONPairSC" attribute="Error" lineEndContext="#stay">
         <DetectChar char="}" context="#pop#pop!BaseSC" endRegion="Region_Object" attribute="Seperator Pair"/>
