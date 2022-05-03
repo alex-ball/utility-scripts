@@ -155,6 +155,7 @@
       <context name="Base" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Passage Start" context="PassageHeaderNormal" char=":" char1=":" column="0" beginRegion="Passage" endRegion="Passage"/>
         <Detect2Chars attribute="Macro" context="#pop!BaseSC" char="&lt;" char1="&lt;" lookAhead="true"/>
+        <Detect2Chars attribute="Macro" context="#pop!BaseSC" char="@" char1="@" lookAhead="true"/>
         <RegExpr attribute="Macro" context="#pop!BaseHL" String="\(([-\w]+):" lookAhead="true"/>
         <IncludeRules context="Harlowe"/>
       </context>
@@ -383,6 +384,10 @@
       </context>
       <!-- SugarCube story format -->
       <context name="SugarCube" attribute="Normal Text" lineEndContext="#stay">
+        <IncludeRules context="SCText" />
+        <IncludeRules context="SCFindFormatting" />
+      </context>
+      <context name="SCText" attribute="Normal Text" lineEndContext="#stay">
         <Detect2Chars attribute="Macro" context="SCMacro" char="&lt;" char1="&lt;"/>
         <RegExpr attribute="Link" context="SCLink" String="\[\[(?:([^\[]+)-&gt;[^\]&gt;]+\]|[^\[&lt;]+&lt;-([^\]]+)\]|([^\[&lt;\|&gt;\]]+)?\|(?:[^\[&lt;\|&gt;\]]+)\](?:\[[^\[&lt;\|&gt;\]]+\])?)\]" lookAhead="true"/>
         <RegExpr attribute="Label" context="#stay" String="\|([-\w]+)[&gt;)]|[&lt;(]([-\w]+)\|"/>
@@ -396,7 +401,31 @@
         <RegExpr attribute="Element" context="SCElement" String="&lt;&name;" beginRegion="element"/>
         <StringDetect attribute="Verbatim String" context="SCNoWikiQ" String="&quot;&quot;&quot;"/>
         <StringDetect attribute="Verbatim String" context="SCCode" String="{{{"/>
+        <Detect2Chars attribute="Element" context="SCDivSpan" char="@" char1="@" beginRegion="divspan"/>
         <IncludeRules context="FindEntityRefs" />
+      </context>
+      <context name="SCFindFormatting" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Formatting" context="SCBold" char="'" char1="'" />
+        <Detect2Chars attribute="Formatting" context="SCItalic" char="/" char1="/" />
+        <IncludeRules context="SCText" />
+      </context>
+      <context name="SCBold" attribute="Bold Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Formatting" context="#pop" char="'" char1="'" />
+        <Detect2Chars attribute="Formatting" context="SCBoldItalic" char="/" char1="/" />
+        <IncludeRules context="SCText" />
+      </context>
+      <context name="SCItalic" attribute="Italic Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Formatting" context="#pop" char="/" char1="/" />
+        <Detect2Chars attribute="Formatting" context="SCItalicBold" char="'" char1="'" />
+        <IncludeRules context="SCText" />
+      </context>
+      <context name="SCBoldItalic" attribute="Bold Italic Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Formatting" context="#pop" char="/" char1="/" />
+        <IncludeRules context="SCText" />
+      </context>
+      <context name="SCItalicBold" attribute="Bold Italic Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Formatting" context="#pop" char="'" char1="'" />
+        <IncludeRules context="SCText" />
       </context>
       <context name="SCMacro" attribute="User Macro" lineEndContext="#stay">
         <DetectChar attribute="Macro" context="#pop!SCEndMacro" char="/"/>
@@ -450,7 +479,7 @@
         <DetectSpaces attribute="Normal Text" context="#stay" />
         <RegExpr attribute="Number" context="#stay" String="\d+"/>
         <RegExpr attribute="Variable" context="#stay" String="\$\w+\b"/>
-        <RegExpr attribute="Temp Variable" context="#stay" String="\b_\w+\b"/>
+        <RegExpr attribute="Temp VariableO" context="#stay" String="\b_\w+\b"/>
         <RangeDetect attribute="String" context="#stay" char="&quot;"  char1="&quot;"/>
         <RangeDetect attribute="String" context="#stay" char="'"  char1="'"/>
         <DetectChar attribute="Temp Variable" context="#pop" char="]"/>
@@ -480,22 +509,41 @@
       <context name="SCCode" attribute="Verbatim String" lineEndContext="#stay">
         <StringDetect attribute="Verbatim String" context="#pop" String="}}}"/>
       </context>
+      <context name="SCDivSpan" attribute="Normal Text" lineEndContext="#pop!SCDivSpanContent">
+        <RegExpr attribute="Selector Id" context="SCDivSpanSelector" String="(?:(?:\.|#)\w[-\w]*)+;" lookAhead="true" />
+        <RegExpr attribute="Normal Text" context="Rule##CSS" String="[-\w]+:[^;]+;" lookAhead="true"/>
+        <DetectSpaces attribute="Normal Text" context="#pop!SCDivSpanContent" />
+        <Detect2Chars attribute="Element" context="#pop" char="@" char1="@" endRegion="divspan" />
+        <IncludeRules context="SugarCube" />
+      </context>
+      <context name="SCDivSpanSelector" attribute="Separator" lineEndContext="#pop#pop!SCDivSpanContent">
+        <RegExpr attribute="Selector Id" context="SCDivSpanSelectorEnd" String="#\w[-\w]*(?=;|\.|#)" />
+        <RegExpr attribute="Selector Class" context="SCDivSpanSelectorEnd" String="\.\w[-\w]*(?=;|\.|#)" />
+        <DetectChar attribute="Separator Symbol" context="#pop" char=";" />
+      </context>
+      <context name="SCDivSpanContent" attribute="Normal Text" lineEndContext="#stay">
+        <Detect2Chars attribute="Element" context="#pop" char="@" char1="@" endRegion="divspan" />
+        <IncludeRules context="SugarCube" />
+      </context>
     </contexts>
     <itemDatas>
       <itemData name="Normal Text" defStyleNum="dsNormal"/>
+      <itemData name="Bold Text" defStyleNum="dsNormal" bold="true"/>
+      <itemData name="Italic Text" defStyleNum="dsNormal" italic="true"/>
+      <itemData name="Bold Italic Text" defStyleNum="dsNormal" bold="true" italic="true"/>
       <itemData name="Other Text" defStyleNum="dsNormal" />
       <itemData name="Passage Start" defStyleNum="dsAnnotation"/>
       <itemData name="Passage Name" defStyleNum="dsBuiltIn"/>
       <itemData name="Tags" defStyleNum="dsPreprocessor"/>
       <itemData name="Coordinates" defStyleNum="dsSpecialString"/>
-      <itemData name="Macro" defStyleNum="dsFunction" bold="true"/>
-      <itemData name="User Macro" defStyleNum="dsFunction" bold="false"/>
+      <itemData name="Macro" defStyleNum="dsFunction" bold="true" spellChecking="false"/>
+      <itemData name="User Macro" defStyleNum="dsFunction" bold="false" spellChecking="false"/>
       <itemData name="Label" defStyleNum="dsExtension" bold="true"/>
       <itemData name="Hook" defStyleNum="dsExtension" bold="false"/>
       <itemData name="Variable" defStyleNum="dsVariable"/>
       <itemData name="Temp Variable" defStyleNum="dsVariable"/>
       <itemData name="String" defStyleNum="dsString" />
-      <itemData name="Macro in String" defStyleNum="dsSpecialString"/>
+      <itemData name="Macro in String" defStyleNum="dsSpecialString" spellChecking="false"/>
       <itemData name="Verbatim String" defStyleNum="dsVerbatimString" />
       <itemData name="Number" defStyleNum="dsFloat" />
       <itemData name="Link Text" defStyleNum="dsOthers" underline="true"/>
@@ -515,6 +563,10 @@
       -->
       <itemData name="String Key" defStyleNum="dsDataType" />
       <itemData name="String Value" defStyleNum="dsString" />
+      <itemData name="Selector Id" defStyleNum="dsPreprocessor" bold="true" spellChecking="false"/>
+      <itemData name="Selector Class" defStyleNum="dsFunction" spellChecking="false"/>
+      <itemData name="Separator Symbol" defStyleNum="dsOperator" spellChecking="false"/>
+      <itemData name="Formatting" defStyleNum="dsDecVal" bold="true" />
     </itemDatas>
   </highlighting>
 </language>
