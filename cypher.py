@@ -93,7 +93,7 @@ class Solver:
     def guess(self, char_from: str, char_to: str):
         """Apply guess, ensuring one-to-one mapping."""
         if k := self.encipher.get(char_to.upper()):
-            click.echo(f"You previously thought that was {k}.")
+            click.echo(f"You previously thought {k} was that.")
             self.decipher[k] = "_"
             self.decipher[k.lower()] = "_"
         self.decipher[char_from.upper()] = char_to.upper()
