@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from collections import Counter
 import re
+import readline
 import string
 from typing import Any
 
@@ -37,18 +38,21 @@ LETTERS = [
 
 
 class Solver:
-    def __init__(self, enigma: str):
-        self.enigma = list(enigma)
+    def __init__(self, enciphered: str):
+        self.enciphered = enciphered
         """The enciphered string to solve."""
+        self.enigma = self.decompose(enciphered)
+        """The enciphered string as a list of characters."""
         self.counter = Counter()
         """Counts of letters in the enciphered string."""
         self.decipher: dict[str, str] = dict()
         """Mapping from enciphered letters to plain letters."""
-        for char in self.enigma:
-            if char in string.ascii_letters:
-                self.decipher[char.upper()] = "_"
-                self.decipher[char.lower()] = "_"
-                self.counter.update(char.upper())
+        self.initialize()
+
+    @staticmethod
+    def decompose(enciphered: str) -> list[str]:
+        """Splits enciphered string into constituent characters."""
+        return list(enciphered)
 
     @property
     def encipher(self) -> dict[str, str]:
@@ -84,6 +88,14 @@ class Solver:
                 return False
         return True
 
+    def initialize(self):
+        """Count frequencies and prepare decipher mapping."""
+        for char in self.enigma:
+            if char in string.ascii_letters:
+                self.decipher[char.upper()] = "_"
+                self.decipher[char.lower()] = "_"
+                self.counter.update(char.upper())
+
     def show(self):
         """Print out original enciphered text and solution so far."""
         click.echo("".join(self.enigma))
@@ -92,11 +104,12 @@ class Solver:
 
     def guess(self, char_from: str, char_to: str):
         """Apply guess, ensuring one-to-one mapping."""
-        if k := self.encipher.get(char_to.upper()):
-            click.echo(f"You previously thought {k} was that.")
+        char_to_uc = char_to.upper()
+        if k := self.encipher.get(char_to_uc):
+            click.echo(f"You previously thought {k} was {char_to_uc}.")
             self.decipher[k] = "_"
             self.decipher[k.lower()] = "_"
-        self.decipher[char_from.upper()] = char_to.upper()
+        self.decipher[char_from.upper()] = char_to_uc
         self.decipher[char_from.lower()] = char_to.lower()
 
     def validate_guess(self, value: str) -> str:
@@ -106,11 +119,57 @@ class Solver:
             raise click.BadParameter(f"Choose from {', '.join(self.unmapped)}.")
 
 
+class SolverNum(Solver):
+    @staticmethod
+    def decompose(enciphered: str) -> list[str]:
+        """Splits enciphered string into constituent characters."""
+        chars = re.split(r"(\D+)", enciphered)
+        if not chars[0]:
+            chars.pop(0)
+        if not chars[-1]:
+            chars.pop()
+        return chars
+
+    def initialize(self):
+        """Counts frequencies and prepares mapping. Looks for
+        separated integers instead of letters in the enigma.
+        """
+        for char in self.enigma:
+            if char.isnumeric():
+                self.decipher[char] = "_"
+                self.counter.update(char)
+
+    def guess(self, char_from: str, char_to: str):
+        """Apply guess, ensuring one-to-one mapping."""
+        char_to_uc = char_to.upper()
+        if k := self.encipher.get(char_to_uc):
+            click.echo(f"You previously thought {k} was {char_to_uc}.")
+            self.decipher[k] = "_"
+            self.decipher[k.lower()] = "_"
+        self.decipher[char_from] = char_to_uc
+
+    def show(self):
+        """Print out original enciphered text and solution so far."""
+        click.echo("".join(self.enigma))
+        solution = list()
+        for se in self.enigma:
+            sd = self.decipher.get(se, se)
+            wd = len(se)
+            sd = f"{sd:>{wd}}"
+            solution.append(sd)
+        click.echo("".join(solution))
+
+
 @click.command()
-def main():
+@click.option(
+    "-n/-a",
+    "--numeric/--alphabetic",
+    help="Numeric or alphabetic mode (default = alphabetic)",
+)
+def main(numeric: bool):
     """Provides an environment for solving substitution ciphers."""
     enigma = click.prompt("Enter the ciphered phrase")
-    solver = Solver(enigma)
+    solver = SolverNum(enigma) if numeric else Solver(enigma)
 
     while True:
         click.echo()
@@ -124,8 +183,9 @@ def main():
         unsolved = solver.unsolved
         hint = f" [{', '.join(unsolved)}]" if unsolved else ""
         kwargs: dict[str, Any] = dict(default=unsolved[0]) if unsolved else dict()
+        char_type = "number" if numeric else "letter"
         char_from = click.prompt(
-            f"Pick a letter to decipher{hint}",
+            f"Pick a {char_type} to decipher{hint}",
             type=click.Choice(solver.choices, case_sensitive=False),
             show_choices=False,
             **kwargs,
