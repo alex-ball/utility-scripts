@@ -146,8 +146,16 @@ class Solver:
         cols = floor(display_width / entry_width)
         rows = ceil(len(entries) / cols)
         msg_rows = ["" for __ in range(0, rows)]
-        for i, entry in enumerate(entries):
-            msg_rows[i % rows] += f"{entry:<{entry_width}}"
+        col = 0
+        row = 0
+        for entry in entries:
+            if col < cols:
+                col += 1
+            else:
+                col = 1
+                row += 1
+            msg_rows[row] += f"{entry:<{entry_width}}"
+
         for msg in msg_rows:
             click.echo(msg)
 
