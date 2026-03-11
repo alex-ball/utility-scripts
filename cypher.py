@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 from collections import Counter
+from math import ceil, floor
 import re
 import readline
+from shutil import get_terminal_size
 import string
 from typing import Any
 
@@ -64,7 +66,13 @@ class Solver:
     def choices(self) -> list[str]:
         """List of unique letters in the enciphered string, ordered by
         frequency."""
-        return [v for v, count in self.counter.most_common()]
+        return [v for v, __ in self.counter.most_common()]
+
+    @property
+    def cipher_chars(self) -> list[str]:
+        """List of unique letters in the enciphered string, ordered
+        alphanumerically."""
+        return sorted([v for v in self.counter.keys()])
 
     @property
     def unsolved(self) -> list[str]:
@@ -90,11 +98,13 @@ class Solver:
 
     def initialize(self):
         """Count frequencies and prepare decipher mapping."""
+        chars = list()
         for char in self.enigma:
             if char in string.ascii_letters:
                 self.decipher[char.upper()] = "_"
                 self.decipher[char.lower()] = "_"
-                self.counter.update(char.upper())
+                chars.append(char.upper())
+        self.counter.update(chars)
 
     def show(self):
         """Print out original enciphered text and solution so far."""
@@ -113,10 +123,33 @@ class Solver:
         self.decipher[char_from.lower()] = char_to.lower()
 
     def validate_guess(self, value: str) -> str:
+        """If guess is not a single letter or underscore, show solution
+        letters that have not yet been picked."""
         if re.match(r"^[_A-Za-z]$", value):
             return value
         else:
             raise click.BadParameter(f"Choose from {', '.join(self.unmapped)}.")
+
+    def solution(self):
+        """Print out the finished mapping from enciphered to deciphered
+        characters.
+        """
+        # Turn mapping into list of strings
+        entries: list[str] = list()
+        keys = self.cipher_chars
+        key_width = max([len(k) for k in keys])
+        for k in keys:
+            entries.append(f"{k:>{key_width}} = {self.decipher[k]}")
+
+        entry_width = 10
+        display_width, __ = get_terminal_size()
+        cols = floor(display_width / entry_width)
+        rows = ceil(len(entries) / cols)
+        msg_rows = ["" for __ in range(0, rows)]
+        for i, entry in enumerate(entries):
+            msg_rows[i % rows] += f"{entry:<{entry_width}}"
+        for msg in msg_rows:
+            click.echo(msg)
 
 
 class SolverNum(Solver):
@@ -130,14 +163,22 @@ class SolverNum(Solver):
             chars.pop()
         return chars
 
+    @property
+    def cipher_chars(self) -> list[str]:
+        """List of unique letters in the enciphered string, ordered
+        alphanumerically."""
+        return sorted([v for v in self.counter.keys()], key=lambda v: int(v))
+
     def initialize(self):
         """Counts frequencies and prepares mapping. Looks for
         separated integers instead of letters in the enigma.
         """
+        chars = list()
         for char in self.enigma:
             if char.isnumeric():
                 self.decipher[char] = "_"
-                self.counter.update(char)
+                chars.append(char)
+        self.counter.update(chars)
 
     def guess(self, char_from: str, char_to: str):
         """Apply guess, ensuring one-to-one mapping."""
@@ -168,6 +209,12 @@ class SolverNum(Solver):
 )
 def main(numeric: bool):
     """Provides an environment for solving substitution ciphers."""
+    click.secho("Deciphering Tool\n", fg="blue", bold="True")
+    click.secho(
+        "Tip: Give a blank guess to see letters you haven't guessed yet.\n",
+        fg="green",
+    )
+
     enigma = click.prompt("Enter the ciphered phrase")
     solver = SolverNum(enigma) if numeric else Solver(enigma)
 
@@ -199,7 +246,8 @@ def main(numeric: bool):
         )
         solver.guess(char_from, char_to)
 
-    click.echo("\nCongratulations!")
+    click.echo("\nCongratulations!\n")
+    solver.solution()
 
 
 if __name__ == "__main__":
