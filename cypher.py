@@ -263,7 +263,7 @@ class WordMixin(SolverProtocol):
                 ]
             enigma = self.word_enigmas[k]
             solution = "".join([self.decipher.get(v, v) for v in enigma])
-            entries.append(f"{k:>{key_width}} = {solution}")
+            entries.append(f"{k:<{key_width}} = {solution}")
 
         entry_width = max(len(v) for v in entries) + 3
         display_width, __ = get_terminal_size()
