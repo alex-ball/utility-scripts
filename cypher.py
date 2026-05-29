@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
+import re
+import readline  # noqa: F401
+import string
 from collections import Counter
 from math import ceil, floor
-import re
-import readline
 from shutil import get_terminal_size
-import string
-from typing import Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 import click
 
@@ -45,6 +45,10 @@ class Solver:
         """The enciphered string to solve."""
         self.enigma = self.decompose(enciphered)
         """The enciphered string as a list of characters."""
+        self.enc_words: list[str] = self.as_words(enciphered)
+        """Words extracted from enciphered string."""
+        self.word_enigmas: dict[str, list[str]] = dict()
+        """Cache for enciphered words broken down into lists of characters."""
         self.counter = Counter()
         """Counts of letters in the enciphered string."""
         self.decipher: dict[str, str] = dict()
@@ -55,6 +59,11 @@ class Solver:
     def decompose(enciphered: str) -> list[str]:
         """Splits enciphered string into constituent characters."""
         return list(enciphered)
+
+    @staticmethod
+    def as_words(enciphered: str) -> list[str]:
+        """Splits enciphered string into constituent words."""
+        return enciphered.split()
 
     @property
     def encipher(self) -> dict[str, str]:
@@ -137,7 +146,7 @@ class Solver:
         # Turn mapping into list of strings
         entries: list[str] = list()
         keys = self.cipher_chars
-        key_width = max([len(k) for k in keys])
+        key_width = max(len(k) for k in keys)
         for k in keys:
             entries.append(f"{k:>{key_width}} = {self.decipher[k]}")
 
@@ -163,13 +172,24 @@ class Solver:
 class SolverNum(Solver):
     @staticmethod
     def decompose(enciphered: str) -> list[str]:
-        """Splits enciphered string into constituent characters."""
+        """Splits enciphered string into constituent characters.
+
+        Specifically, the returned list alternates between integer
+        strings and "filler" text (typically space or punctuation).
+        """
         chars = re.split(r"(\D+)", enciphered)
         if not chars[0]:
+            # Empty string at start if input does not start with digit
             chars.pop(0)
         if not chars[-1]:
+            # Empty string at end if input does not end with digit
             chars.pop()
         return chars
+
+    @staticmethod
+    def as_words(enciphered: str) -> list[str]:
+        """Splits enciphered string into constituent words."""
+        return re.split(r"\s*\|\s*", enciphered.strip())
 
     @property
     def cipher_chars(self) -> list[str]:
@@ -209,22 +229,99 @@ class SolverNum(Solver):
         click.echo("".join(solution))
 
 
+if TYPE_CHECKING:
+
+    class SolverProtocol(Protocol):
+        @property
+        def decipher(self) -> dict[str, str]: ...
+
+        @property
+        def enc_words(self) -> list[str]: ...
+
+        @property
+        def word_enigmas(self) -> dict[str, list[str]]: ...
+
+        @staticmethod
+        def decompose(enciphered: str) -> list[str]: ...
+else:
+
+    class SolverProtocol: ...
+
+
+class WordMixin(SolverProtocol):
+    def show(self):
+        """Print out original enciphered text and solution so far, on a
+        word-by-word basis (grid based).
+        """
+        entries: list[str] = list()
+        key_width = max(len(k) for k in self.enc_words)
+        for k in self.enc_words:
+            if k not in self.word_enigmas:
+                # Remove whitespace:
+                self.word_enigmas[k] = [
+                    vv for v in self.decompose(k) if (vv := v.strip())
+                ]
+            enigma = self.word_enigmas[k]
+            solution = "".join([self.decipher.get(v, v) for v in enigma])
+            entries.append(f"{k:>{key_width}} = {solution}")
+
+        entry_width = max(len(v) for v in entries) + 3
+        display_width, __ = get_terminal_size()
+        cols = floor((display_width + 3) / entry_width)
+        rows = ceil(len(entries) / cols)
+        msg_rows = ["" for __ in range(0, rows)]
+        col = 0
+        row = 0
+        for entry in entries:
+            if col < cols:
+                col += 1
+            else:
+                col = 1
+                row += 1
+            msg_rows[row] += f"{entry:<{entry_width}}"
+
+        for msg in msg_rows:
+            click.echo(msg.strip())
+
+
+class SolverWord(WordMixin, Solver):
+    pass
+
+
+class SolverNumWord(WordMixin, SolverNum):
+    pass
+
+
 @click.command()
 @click.option(
     "-n/-a",
     "--numeric/--alphabetic",
     help="Numeric or alphabetic mode (default = alphabetic)",
 )
-def main(numeric: bool):
+@click.option(
+    "-w/-W", "--word/--whole", help="Word-by-word or whole line mode (default = whole)"
+)
+def main(numeric: bool, word: bool):
     """Provides an environment for solving substitution ciphers."""
     click.secho("Deciphering Tool\n", fg="blue", bold="True")
     click.secho(
-        "Tip: Give a blank guess to see letters you haven't guessed yet.\n",
+        "Tip: Enter a blank guess to see letters you haven't guessed yet.\n",
         fg="green",
     )
 
-    enigma = click.prompt("Enter the ciphered phrase")
-    solver = SolverNum(enigma) if numeric else Solver(enigma)
+    phrase_prompt = "Enter the ciphered phrase"
+
+    if word:
+        if numeric:
+            phrase_prompt += ", using pipe | to separate words"
+            solver_cls = SolverNumWord
+        else:
+            solver_cls = SolverWord
+    else:
+        solver_cls = SolverNum if numeric else Solver
+
+    enciphered = click.prompt(phrase_prompt)
+    solver = solver_cls(enciphered)
 
     while True:
         click.echo()
