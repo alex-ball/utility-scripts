@@ -9,8 +9,8 @@ import click
 @click.option(
     "-n",
     "--number",
-    help="Number of digits (2-7).",
-    type=click.IntRange(min=2, max=8),
+    help="Number of digits.",
+    type=click.IntRange(min=2, max=7),
     default=2,
 )
 def main(number: int):
