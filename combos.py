@@ -13,7 +13,8 @@ import click
     type=click.IntRange(min=2, max=7),
     default=2,
 )
-def main(number: int):
+@click.option("-t", "--total", help="Only show combos for this total.", type=int)
+def main(number: int, total: int | None):
     """Shows the possible ways of achieving a given total by summing a
     given number of integers between 1 and 9 inclusive."""
 
@@ -22,8 +23,12 @@ def main(number: int):
     for combo in combos:
         results[sum(combo)].append(combo)
 
-    for s in sorted(results.keys()):
-        click.echo(f"{s:>2}: {', '.join([str(i) for i in results[s]])}")
+    if total:
+        result = results.get(total, [])
+        click.echo(f"{total}: {', '.join([str(i) for i in result])}")
+    else:
+        for s in sorted(results.keys()):
+            click.echo(f"{s:>2}: {', '.join([str(i) for i in results[s]])}")
 
 
 if __name__ == "__main__":
