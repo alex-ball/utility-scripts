@@ -253,7 +253,7 @@ class WordMixin(SolverProtocol):
         """Print out original enciphered text and solution so far, on a
         word-by-word basis (grid based).
         """
-        entries: list[str] = list()
+        entries: list[str] = []
         key_width = max(len(k) for k in self.enc_words)
         for k in self.enc_words:
             if k not in self.word_enigmas:
@@ -263,13 +263,14 @@ class WordMixin(SolverProtocol):
                 ]
             enigma = self.word_enigmas[k]
             solution = "".join([self.decipher.get(v, v) for v in enigma])
-            entries.append(f"{k:<{key_width}} = {solution}")
+            entries.append(f"• {k:>{key_width}} = {solution}")
 
-        entry_width = max(len(v) for v in entries) + 3
+        col_sep = 1
+        entry_width = max(len(v) for v in entries) + col_sep
         display_width, __ = get_terminal_size()
-        cols = floor((display_width + 3) / entry_width)
+        cols = floor((display_width + col_sep) / entry_width)
         rows = ceil(len(entries) / cols)
-        msg_rows = ["" for __ in range(0, rows)]
+        msg_rows = ["" for __ in range(rows)]
         col = 0
         row = 0
         for entry in entries:
@@ -327,9 +328,8 @@ def main(numeric: bool, word: bool):
         click.echo()
         solver.show()
 
-        if solver.is_complete:
-            if click.prompt("\nHappy with that?", type=bool):
-                break
+        if solver.is_complete and click.prompt("\nHappy with that?", type=bool):
+            break
 
         click.echo()
         unsolved = solver.unsolved
